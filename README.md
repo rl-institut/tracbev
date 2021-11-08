@@ -1,44 +1,19 @@
-# rli_template
-Template repository for creating new projects under the RLI's umbrella
+# Quickstart guide to TracBEV
 
-## Get started
+## What is TracBEV?
 
-Simply click on the green `Use this template` button on the left of the `Clone or download` button.
+TracBEV is a **t**ool for the **r**egional **a**llocation of **c**harging infrastructure. In practice this allows users to use results generated via [SimBEV](https://github.com/rl-institut/simbev) and place the corresponding charging points on a map. These are split into the 4 use cases hpc, public, home and work.
 
-The detailed instructions to create a new repository from this template can be found [here](https://help.github.com/en/articles/creating-a-repository-from-a-template).
+## Installation
 
-## src folder
+- clone repository to your local machine
+- install requirements found in requirements.txt (virtualenv recommended)
 
-This folder is where you should place the code of your package (package name to be edited in `setup.py` under name)
+## Get Data
 
-You can install it locally for developing with
+The required data to run this tool will soon be available here.
 
-    python setup.py install
-    
-More details for packaging are available on [https://packaging.python.org](https://packaging.python.org/tutorials/packaging-projects/)
+## Running TracBEV
 
+After adding the data directory in your local clone, simply run `main.py`.
 
-## Docs
-
-To build the docs simply go to the `docs` folder
-
-    cd docs
-
-Install the requirements
-
-    pip install -r docs_requirements.txt
-
-and run
-
-    make html
-
-The output will then be located in `docs/_build/html` and can be opened with your favorite browser
-
-## Code linting
-
-In this template, 3 possible linters are proposed:
-- flake8 only sends warnings and error about linting (PEP8)
-- pylint sends warnings and error about linting (PEP8) and also allows warning about imports order
-- black sends warning but can also fix the files for you
-
-You can perfectly use the 3 of them or subset, at your preference. Don't forget to edit `.travis.yml` if you want to deactivate the automatic testing of some linters!
