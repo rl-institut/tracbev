@@ -82,7 +82,7 @@ def parse_data(uc_list: []):
 if __name__ == '__main__':
 
     print('Starting Program for Distribution of Energy...')
-    ucs = [1, 2, 3, 4]  # list of numbers corresponding to the use cases
+    ucs = [4]  # list of numbers corresponding to the use cases
     data = parse_data(ucs)
     boundaries = data['boundaries']
     amenities = data['amenities']
