@@ -39,7 +39,7 @@ def load_csv(file, delimiter=';', is_num=False, is_dict=False):
 def save(data, uc, col_select, region_key):
 
     filename = 'output_geo_{}_region_{}.csv'.format(uc, region_key)
-    path = os.path.join('.', 'Results', '{}').format(filename)  # path = '{}\{}'.format(pathlib.Path().resolve(), filename)
+    path = os.path.join('.', 'results', '{}').format(filename)
     data.to_csv(path, sep=';', columns=col_select, decimal=',', index=True)
     print('saving {} in region {} successful'.format(uc, region_key))
 

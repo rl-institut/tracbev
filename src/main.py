@@ -8,10 +8,8 @@ import os
 import Use_Cases
 import Utility
 
-if __name__ == '__main__':
 
-    print('Starting Program for Distribution of Energy...')
-
+def parse_data(uc_list: []):
     # read config file
     cwd = os.getcwd()
     parser = cp.ConfigParser()
@@ -23,15 +21,19 @@ if __name__ == '__main__':
     except Exception:
         raise FileNotFoundError(f'Cannot read config file {cfg_file} - malformed?')
     csv_name = parser.get('region_mode', 'csv_name')
-    uc1_radius = int(parser.get('uc_params', 'uc1_radius'))
-    uc4_weight_retail = float(parser.get('uc_params', 'uc4_weight_retail'))
-    uc4_weight_commercial = float(parser.get('uc_params', 'uc4_weight_commercial'))
-    uc4_weight_industrial = float(parser.get('uc_params', 'uc4_weight_industrial'))
+    # always used parameters
+    boundaries = Utility.einlesen_geo(os.path.join('.', 'Data', 'boundaries.gpkg'))
+    boundaries.set_index('ags_0', inplace=True)  # AGS als Index des Dataframes setzen
+    boundaries = boundaries.dissolve(by='ags_0')  # Zusammenfassen der Regionenn mit geleichem AGS
+    boundaries = boundaries.to_crs(3035)
+
+    am_data = Utility.load_csv(os.path.join('.', 'Data', 'Res_SimBEV', 'amenity_update.csv'))
+    amenities = pd.DataFrame.from_dict(am_data)
 
     region_data = Utility.load_csv(os.path.join('.', 'Data', csv_name))
-    region_key = ['']*len(region_data)
+    region_key = [''] * len(region_data)
     i = 0
-    while i < len(region_data):  #TODO: rethink region data and csv
+    while i < len(region_data):  # TODO: rethink region data and csv
         region_key[i] = region_data.loc[i, 'AGS']
         i += 1
 
@@ -39,56 +41,80 @@ if __name__ == '__main__':
     print('Number of Regions set:', anz_regions)
     print('AGS Region_Key is set to:', region_key)
 
-    # read input data
-    fuel_stations = Utility.einlesen_geo(os.path.join('.', 'Data', 'fuel_stations.gpkg'))
-    anz_fs = len(fuel_stations)
+    result = {
+        'boundaries': boundaries,
+        'amenities': amenities,
+        'region_key': region_key
+    }
 
-    boundaries = Utility.einlesen_geo(os.path.join('.', 'Data', 'boundaries.gpkg'))
+    if 1 in uc_list:
+        uc1_radius = int(parser.get('uc_params', 'uc1_radius'))
+        fuel_stations = Utility.einlesen_geo(os.path.join('.', 'Data', 'fuel_stations.gpkg'))
+        traffic = Utility.einlesen_geo(os.path.join('.', 'Data', 'berlin_verkehr.gpkg'))
+        traffic = traffic.to_crs(3035)  # transform to reference Coordinate System
+        result.update({'uc1_radius': uc1_radius, 'fuel_stations': fuel_stations, 'traffic': traffic})
 
-    boundaries.set_index('ags_0', inplace=True)     # AGS als Index des Dataframes setzen
-    boundaries = boundaries.dissolve(by='ags_0')    # Zusammenfassen der Regionenn mit geleichem AGS
-    boundaries = boundaries.to_crs(3035)
+    if 2 in uc_list:
+        public = Utility.einlesen_geo(os.path.join('.', 'Data', 'osm_poi_elia.gpkg'))
 
-    traffic = Utility.einlesen_geo(os.path.join('.', 'Data', 'berlin_verkehr.gpkg'))
-    traffic = traffic.to_crs(3035)  # transform to reference Coordinate System
+        poi_data = Utility.load_csv(os.path.join('.', 'Data', '2020-12-02_OSM_POI_Gewichtung.csv'))
+        poi = pd.DataFrame.from_dict(poi_data)
+        result.update({'public': public, 'poi': poi})
 
-    zensus_data = Utility.einlesen_geo(
-        os.path.join('.', 'Data', 'destatis_zensus_population_per_ha_filtered.gpkg'))
-    zensus_data = zensus_data.to_crs(3035)
-    zensus = zensus_data.iloc[:, 2:5]
+    if 3 in uc_list:
+        zensus_data = Utility.einlesen_geo(
+            os.path.join('.', 'Data', 'destatis_zensus_population_per_ha_filtered.gpkg'))
+        zensus_data = zensus_data.to_crs(3035)
+        zensus = zensus_data.iloc[:, 2:5]
+        result['zensus'] = zensus
 
-    public = Utility.einlesen_geo(os.path.join('.', 'Data', 'osm_poi_elia.gpkg'))
+    if 4 in uc_list:
+        uc4_weight_retail = float(parser.get('uc_params', 'uc4_weight_retail'))
+        uc4_weight_commercial = float(parser.get('uc_params', 'uc4_weight_commercial'))
+        uc4_weight_industrial = float(parser.get('uc_params', 'uc4_weight_industrial'))
+        work = Utility.einlesen_geo(os.path.join('.', 'Data', 'landuse.gpkg'))
+        result.update({'retail': uc4_weight_retail, 'commercial': uc4_weight_commercial,
+                       'industrial': uc4_weight_industrial, 'work': work})
 
-    poi_data = Utility.load_csv(os.path.join('.', 'Data', '2020-12-02_OSM_POI_Gewichtung.csv'))
-    poi = pd.DataFrame.from_dict(poi_data)
+    return result
 
-    work = Utility.einlesen_geo(os.path.join('.', 'Data', 'landuse.gpkg'))
 
-    am_data = Utility.load_csv(os.path.join('.', 'Data', 'Res_SimBEV', 'amenity_update.csv'))
-    amenities = pd.DataFrame.from_dict(am_data)
-    anz_regions = len(boundaries)
+if __name__ == '__main__':
 
-    # Start the Use Cases for areas in region_key
-    for key in region_key:
-        region = boundaries.loc[key, 'geometry']
-        region = gpd.GeoSeries(region)  # format to geoseries, otherwise problems plotting
+    print('Starting Program for Distribution of Energy...')
+    ucs = [1]  # list of numbers corresponding to the use cases
+    data = parse_data(ucs)
+    bounds = data['boundaries']
+    amens = data['amenities']
+
+    # create result folder
+    if not os.path.exists('results'):
+        os.makedirs('results')
+
+    for key in data['region_key']:
+        region = bounds.loc[key, 'geometry']
+        region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
 
         # Start Use Cases
-        fs = Use_Cases.uc1_public_fast(fuel_stations, boundaries,
-                                       amenities, traffic,
-                                       region, key, uc1_radius)
+        if 1 in ucs:
+            fs = Use_Cases.uc1_public_fast(data['fuel_stations'], bounds,
+                                           amens, data['traffic'],
+                                           region, key, data['uc1_radius'])
 
-        pu = Use_Cases.uc2_public_slow(public, boundaries,
-                                       amenities, poi,
-                                       region, key)
+        if 2 in ucs:
+            pu = Use_Cases.uc2_public_slow(data['public'], bounds,
+                                           amens, data['poi'],
+                                           region, key)
 
-        pl = Use_Cases.uc3_private_home(zensus, boundaries,
-                                        amenities, region,
-                                        key)
+        if 3 in ucs:
+            pl = Use_Cases.uc3_private_home(data['zensus'], bounds,
+                                            amens, region,
+                                            key)
 
-        pw = Use_Cases.uc4_private_work(work, boundaries,
-                                        amenities, region,
-                                        key, uc4_weight_retail,
-                                        uc4_weight_commercial, uc4_weight_industrial)
+        if 4 in ucs:
+            pw = Use_Cases.uc4_private_work(data['work'], bounds,
+                                            amens, region,
+                                            key, data['retail'],
+                                            data['commercial'], data['industrial'])
 
     plt.show()
