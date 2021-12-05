@@ -82,33 +82,38 @@ def parse_data(uc_list: []):
 if __name__ == '__main__':
 
     print('Starting Program for Distribution of Energy...')
-    ucs = [4]  # list of numbers corresponding to the use cases
+    ucs = [1]  # list of numbers corresponding to the use cases
     data = parse_data(ucs)
-    boundaries = data['boundaries']
-    amenities = data['amenities']
+    bounds = data['boundaries']
+    amens = data['amenities']
+
+    # create result folder
+    if not os.path.exists('results'):
+        os.makedirs('results')
+
     for key in data['region_key']:
-        region = boundaries.loc[key, 'geometry']
-        region = gpd.GeoSeries(region)  # format to geoseries, otherwise problems plotting
+        region = bounds.loc[key, 'geometry']
+        region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
 
         # Start Use Cases
         if 1 in ucs:
-            fs = Use_Cases.uc1_public_fast(data['fuel_stations'], boundaries,
-                                           amenities, data['traffic'],
+            fs = Use_Cases.uc1_public_fast(data['fuel_stations'], bounds,
+                                           amens, data['traffic'],
                                            region, key, data['uc1_radius'])
 
         if 2 in ucs:
-            pu = Use_Cases.uc2_public_slow(data['public'], boundaries,
-                                           amenities, data['poi'],
+            pu = Use_Cases.uc2_public_slow(data['public'], bounds,
+                                           amens, data['poi'],
                                            region, key)
 
         if 3 in ucs:
-            pl = Use_Cases.uc3_private_home(data['zensus'], boundaries,
-                                            amenities, region,
+            pl = Use_Cases.uc3_private_home(data['zensus'], bounds,
+                                            amens, region,
                                             key)
 
         if 4 in ucs:
-            pw = Use_Cases.uc4_private_work(data['work'], boundaries,
-                                            amenities, region,
+            pw = Use_Cases.uc4_private_work(data['work'], bounds,
+                                            amens, region,
                                             key, data['retail'],
                                             data['commercial'], data['industrial'])
 

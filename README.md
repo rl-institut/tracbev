@@ -8,10 +8,12 @@ TracBEV is a **t**ool for the **r**egional **a**llocation of **c**harging infras
 
 - clone repository to your local machine
 - install requirements found in requirements.txt (virtualenv recommended)
+- setup.py is not working yet
 
 ## Get Data
 
 The required data to run this tool will soon be available here.
+For now it can be requested from us directly.
 
 ## Running TracBEV
 
