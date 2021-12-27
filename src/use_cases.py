@@ -1,10 +1,10 @@
-import Plots
-import Utility
+import plots
+import utility
 import pandas as pd
 import numpy as np
 
 
-def uc1_public_fast(
+def uc1_hpc(
         fuel_stations, boundaries,
         amenities, traffic_data,
         region, region_key, radius):
@@ -69,22 +69,22 @@ def uc1_public_fast(
         fs = fs.assign(INDEX=x)
         fs.set_index('INDEX', inplace=True)
 
-        fs['energysum'] = Utility.apportion(fs['traffic'], energy_sum_overall)
+        fs['energysum'] = utility.apportion(fs['traffic'], energy_sum_overall)
         fs['conversionfactor'] = fs['energysum'] / energy_sum_overall
 
     else:
         print('No fast charging possible, because no fuel station in the area!')
     if anz_fs != 0:
-        Plots.plot_uc1(fs, region,
+        plots.plot_uc1(fs, region,
                        traffic_data, circles)
 
     col_select = ['geometry', 'traffic', 'energysum', 'conversionfactor']
-    Utility.save(fs, uc_id, col_select, region_key)
+    utility.save(fs, uc_id, col_select, region_key)
 
     return fs
 
 
-def uc2_public_slow(
+def uc2_public(
         public, boundaries,
         amenities, poi,
         region, region_key):
@@ -152,17 +152,17 @@ def uc2_public_slow(
     pir = pir.assign(INDEX=x)
     pir.set_index('INDEX', inplace=True)
 
-    pir['energysum'] = Utility.apportion(pir['weight'], energy_sum_overall)
+    pir['energysum'] = utility.apportion(pir['weight'], energy_sum_overall)
     pir['conversionfactor'] = pir['energysum'] / energy_sum_overall
 
-    Plots.plot_uc2(pir, region)
+    plots.plot_uc2(pir, region)
 
     col_select = ['name', 'amenity', 'leisure', 'shop', 'tourism',
                   'geometry', 'energysum', 'weight', 'conversionfactor']
-    Utility.save(pir, uc_id, col_select, region_key)
+    utility.save(pir, uc_id, col_select, region_key)
 
 
-def uc3_private_home(
+def uc3_home(
         zensus, boundaries,
         amenities, region,
         region_key):
@@ -200,20 +200,20 @@ def uc3_private_home(
     hir = hir.assign(INDEX=x)
     hir.set_index('INDEX', inplace=True)
 
-    hir['energysum'] = Utility.apportion(hir['conversionfactor'], energy_sum_overall)
+    hir['energysum'] = utility.apportion(hir['conversionfactor'], energy_sum_overall)
 
-    Plots.plot_uc3(hir, region)
+    plots.plot_uc3(hir, region)
 
     col_select = ['population', 'geom_point', 'geometry', 'energysum', 'conversionfactor']
-    Utility.save(hir, uc_id, col_select, region_key)
+    utility.save(hir, uc_id, col_select, region_key)
 
     return zensus
 
 
-def uc4_private_work(work, boundaries,
-                     amenities, region,
-                     region_key, weight_retail,
-                     weight_commercial, weight_industrial):
+def uc4_work(work, boundaries,
+             amenities, region,
+             region_key, weight_retail,
+             weight_commercial, weight_industrial):
 
     print('UC4')
     uc_id = 'Use_Case_4_Private_Work'
@@ -268,12 +268,12 @@ def uc4_private_work(work, boundaries,
     wir = wir.assign(INDEX=x)
     wir.set_index('INDEX', inplace=True)
 
-    wir['energysum'] = Utility.apportion(wir['weight'], energy_sum_overall)
+    wir['energysum'] = utility.apportion(wir['weight'], energy_sum_overall)
     wir['conversionfactor'] = wir['energysum']/energy_sum_overall
 
     wir['center_geo'] = wir.centroid
 
-    Plots.plot_uc4(wir, region)
+    plots.plot_uc4(wir, region)
 
     col_select = ['landuse', 'geometry', 'center_geo', 'energysum', 'weight', 'conversionfactor']
-    Utility.save(wir, uc_id, col_select, region_key)
+    utility.save(wir, uc_id, col_select, region_key)
