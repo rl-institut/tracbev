@@ -9,18 +9,24 @@ import use_cases as uc
 import utility
 
 
-def parse_data(uc_list: []):
+def parse_data():
     # read config file
     cwd = os.getcwd()
     parser = cp.ConfigParser()
-    cfg_file = os.path.join(cwd, 'location_config.cfg')
+    cfg_file = os.path.join(cwd, 'tracbev_config.cfg')
     if not os.path.isfile(cfg_file):
         raise FileNotFoundError(f'Config file {cfg_file} not found.')
     try:
         parser.read(cfg_file)
     except Exception:
         raise FileNotFoundError(f'Cannot read config file {cfg_file} - malformed?')
+
     csv_name = parser.get('region_mode', 'csv_name')
+    run_uc1 = parser.getboolean('basic', 'uc1_hpc')
+    run_uc2 = parser.getboolean('basic', 'uc2_public')
+    run_uc3 = parser.getboolean('basic', 'uc3_home')
+    run_uc4 = parser.getboolean('basic', 'uc4_work')
+
     # always used parameters
     boundaries = utility.einlesen_geo(os.path.join('.', 'Data', 'boundaries.gpkg'))
     boundaries.set_index('ags_0', inplace=True)  # AGS als Index des Dataframes setzen
@@ -41,49 +47,52 @@ def parse_data(uc_list: []):
     print('Number of Regions set:', anz_regions)
     print('AGS Region_Key is set to:', region_key)
 
-    result = {
+    config_dict = {
         'boundaries': boundaries,
         'amenities': amenities,
-        'region_key': region_key
+        'region_key': region_key,
+        'run_uc1': run_uc1,
+        'run_uc2': run_uc2,
+        'run_uc3': run_uc3,
+        'run_uc4': run_uc4,
     }
 
-    if 1 in uc_list:
+    if run_uc1:
         uc1_radius = int(parser.get('uc_params', 'uc1_radius'))
         fuel_stations = utility.einlesen_geo(os.path.join('.', 'Data', 'fuel_stations.gpkg'))
         traffic = utility.einlesen_geo(os.path.join('.', 'Data', 'berlin_verkehr.gpkg'))
         traffic = traffic.to_crs(3035)  # transform to reference Coordinate System
-        result.update({'uc1_radius': uc1_radius, 'fuel_stations': fuel_stations, 'traffic': traffic})
+        config_dict.update({'uc1_radius': uc1_radius, 'fuel_stations': fuel_stations, 'traffic': traffic})
 
-    if 2 in uc_list:
+    if run_uc2:
         public = utility.einlesen_geo(os.path.join('.', 'Data', 'osm_poi_elia.gpkg'))
 
         poi_data = utility.load_csv(os.path.join('.', 'Data', '2020-12-02_OSM_POI_Gewichtung.csv'))
         poi = pd.DataFrame.from_dict(poi_data)
-        result.update({'public': public, 'poi': poi})
+        config_dict.update({'public': public, 'poi': poi})
 
-    if 3 in uc_list:
+    if run_uc3:
         zensus_data = utility.einlesen_geo(
             os.path.join('.', 'Data', 'destatis_zensus_population_per_ha_filtered.gpkg'))
         zensus_data = zensus_data.to_crs(3035)
         zensus = zensus_data.iloc[:, 2:5]
-        result['zensus'] = zensus
+        config_dict['zensus'] = zensus
 
-    if 4 in uc_list:
+    if run_uc4:
         uc4_weight_retail = float(parser.get('uc_params', 'uc4_weight_retail'))
         uc4_weight_commercial = float(parser.get('uc_params', 'uc4_weight_commercial'))
         uc4_weight_industrial = float(parser.get('uc_params', 'uc4_weight_industrial'))
         work = utility.einlesen_geo(os.path.join('.', 'Data', 'landuse.gpkg'))
-        result.update({'retail': uc4_weight_retail, 'commercial': uc4_weight_commercial,
-                       'industrial': uc4_weight_industrial, 'work': work})
+        config_dict.update({'retail': uc4_weight_retail, 'commercial': uc4_weight_commercial,
+                            'industrial': uc4_weight_industrial, 'work': work})
 
-    return result
+    return config_dict
 
 
 if __name__ == '__main__':
 
     print('Starting Program for Distribution of Energy...')
-    ucs = [1]  # list of numbers corresponding to the use cases
-    data = parse_data(ucs)
+    data = parse_data()
     bounds = data['boundaries']
     amens = data['amenities']
 
@@ -96,22 +105,22 @@ if __name__ == '__main__':
         region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
 
         # Start Use Cases
-        if 1 in ucs:
+        if data['run_uc1']:
             fs = uc.uc1_hpc(data['fuel_stations'], bounds,
                             amens, data['traffic'],
                             region, key, data['uc1_radius'])
 
-        if 2 in ucs:
+        if data['run_uc2']:
             pu = uc.uc2_public(data['public'], bounds,
                                amens, data['poi'],
                                region, key)
 
-        if 3 in ucs:
+        if data['run_uc3']:
             pl = uc.uc3_home(data['zensus'], bounds,
                              amens, region,
                              key)
 
-        if 4 in ucs:
+        if data['run_uc4']:
             pw = uc.uc4_work(data['work'], bounds,
                              amens, region,
                              key, data['retail'],
