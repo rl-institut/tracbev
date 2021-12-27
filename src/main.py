@@ -3,16 +3,17 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import configparser as cp
 import os
+import argparse
 
 import use_cases as uc
 import utility
 
 
-def parse_data():
+def parse_data(args):
     # read config file
     cwd = os.getcwd()
     parser = cp.ConfigParser()
-    cfg_file = os.path.join(cwd, 'tracbev_config.cfg')
+    cfg_file = os.path.join(cwd, 'scenarios', args.config)
     data_dir = os.path.join(cwd, 'data')
 
     if not os.path.isfile(cfg_file):
@@ -92,43 +93,49 @@ def parse_data():
     return config_dict
 
 
-def run_tracbev():
-    data = parse_data()
-    bounds = data['boundaries']
-    ts = data['timeseries']
+def run_tracbev(data_dict):
+    bounds = data_dict['boundaries']
+    ts = data_dict['timeseries']
 
     # create result folder
     if not os.path.exists('results'):
         os.makedirs('results')
 
-    for key in data['region_key']:
+    for key in data_dict['region_key']:
         region = bounds.loc[key, 'geometry']
         region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
 
         # Start Use Cases
-        if data['run_uc1']:
-            fs = uc.uc1_hpc(data['fuel_stations'], bounds,
-                            ts, data['traffic'],
-                            region, key, data['uc1_radius'])
+        if data_dict['run_uc1']:
+            fs = uc.uc1_hpc(data_dict['fuel_stations'], bounds,
+                            ts, data_dict['traffic'],
+                            region, key, data_dict['uc1_radius'])
 
-        if data['run_uc2']:
-            pu = uc.uc2_public(data['public'], bounds,
-                               ts, data['poi'],
+        if data_dict['run_uc2']:
+            pu = uc.uc2_public(data_dict['public'], bounds,
+                               ts, data_dict['poi'],
                                region, key)
 
-        if data['run_uc3']:
-            pl = uc.uc3_home(data['zensus'], bounds,
+        if data_dict['run_uc3']:
+            pl = uc.uc3_home(data_dict['zensus'], bounds,
                              ts, region,
                              key)
 
-        if data['run_uc4']:
-            pw = uc.uc4_work(data['work'], bounds,
+        if data_dict['run_uc4']:
+            pw = uc.uc4_work(data_dict['work'], bounds,
                              ts, region,
-                             key, data['retail'],
-                             data['commercial'], data['industrial'])
+                             key, data_dict['retail'],
+                             data_dict['commercial'], data_dict['industrial'])
 
 
 if __name__ == '__main__':
     print('Starting Program for Distribution of Energy...')
-    run_tracbev()
+
+    argparser = argparse.ArgumentParser(description='TracBEV tool for allocation of charging infrastructure')
+    argparser.add_argument('config', default="tracbev_config.cfg", nargs='?',
+                        help='Set the config which is located in ./scenarios .')
+    p_args = argparser.parse_args()
+
+    data = parse_data(p_args)
+    run_tracbev(data)
     plt.show()
