@@ -6,7 +6,7 @@ import numpy as np
 
 def uc1_hpc(
         fuel_stations, boundaries,
-        amenities, traffic_data,
+        timeseries, traffic_data,
         region, region_key, radius):
 
     uc_id = 'Use_Case_1_Public_Fast'
@@ -54,7 +54,7 @@ def uc1_hpc(
         energy_sum_per_fs = pd.Series(data, name='energysum')
         fs = fs.join(energy_sum_per_fs)
 
-        load_power = amenities.loc[:, 'sum UC hub']  # TODO use all sum columns
+        load_power = timeseries.loc[:, 'sum UC hub']  # TODO use all sum columns
         load_power.name = 'loadpower_hpc'
         load_power = pd.to_numeric(load_power)
         energy_sum = load_power*15/60  # Ladeleistung in Energie umwandeln
@@ -86,7 +86,7 @@ def uc1_hpc(
 
 def uc2_public(
         public, boundaries,
-        amenities, poi,
+        timeseries, poi,
         region, region_key):
 
     print('UC2')
@@ -102,7 +102,7 @@ def uc2_public(
     es = pd.Series(data, name='energysum')
     pir = pir.join(es)
 
-    load_power = amenities.loc[:, 'sum UC leisure']
+    load_power = timeseries.loc[:, 'sum UC leisure']
     load_power.name = 'chargepower_public'
     load_power = pd.to_numeric(load_power)
     energy_sum = load_power * 15 / 60  # Ladeleistung in Energie umwandeln
@@ -164,7 +164,7 @@ def uc2_public(
 
 def uc3_home(
         zensus, boundaries,
-        amenities, region,
+        timeseries, region,
         region_key):
 
     print('UC3')
@@ -181,7 +181,7 @@ def uc3_home(
     hir = hir.join(es)
     hir['energysum'] = np.nan
 
-    load_power = amenities.loc[:, 'sum UC home']
+    load_power = timeseries.loc[:, 'sum UC home']
     load_power.name = 'chargepower_home'
     load_power = pd.to_numeric(load_power)
     energy_sum = load_power * 15 / 60  # Ladeleistung in Energie umwandeln
@@ -211,7 +211,7 @@ def uc3_home(
 
 
 def uc4_work(work, boundaries,
-             amenities, region,
+             timeseries, region,
              region_key, weight_retail,
              weight_commercial, weight_industrial):
 
@@ -229,7 +229,7 @@ def uc4_work(work, boundaries,
     wir = wir.join(es)
     wir['energysum'] = np.nan
 
-    load_power = amenities.loc[:, 'sum UC work']
+    load_power = timeseries.loc[:, 'sum UC work']
     load_power.name = 'chargepower_work'
     load_power = pd.to_numeric(load_power)
     energy_sum = load_power * 15 / 60  # convert power to energy

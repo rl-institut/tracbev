@@ -4,13 +4,6 @@ import pandas as pd
 import os
 
 
-# load geopackage
-def einlesen_geo(filename):
-
-    data = gpd.read_file(filename)
-    return data
-
-
 # load data from csv
 def load_csv(file, delimiter=';', is_num=False, is_dict=False):
     data = {} if is_dict else []
@@ -36,7 +29,7 @@ def load_csv(file, delimiter=';', is_num=False, is_dict=False):
 
 
 # save in .csv format
-def save(data, uc, col_select, region_key):
+def save(data: pd.DataFrame, uc, col_select, region_key):
 
     filename = 'output_geo_{}_region_{}.csv'.format(uc, region_key)
     path = os.path.join('.', 'results', '{}').format(filename)
