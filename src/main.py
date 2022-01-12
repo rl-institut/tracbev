@@ -72,7 +72,7 @@ def parse_data(args):
     if run_public:
         public = gpd.read_file(os.path.join(data_dir, 'osm_poi_elia.gpkg'))
 
-        poi = pd.read_csv(os.path.join(data_dir, '2020-12-02_OSM_POI_Gewichtung.csv'), sep=';')
+        poi = pd.read_csv(os.path.join(data_dir, '2020-12-02_OSM_POI_Gewichtung.csv'), sep=';', encoding='mbcs')
         config_dict.update({'public': public, 'poi': poi})
 
     if run_home:
