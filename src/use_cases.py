@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 
-def uc1_hpc(
+def hpc(
         fuel_stations, boundaries,
         timeseries, traffic_data,
         region, region_key, radius):
@@ -13,17 +13,16 @@ def uc1_hpc(
     # radius = 900  # radius around fuel station for traffic acquisition
 
     # get fuelstations in region
-    anz_fuel_stations = len(fuel_stations)
-    fuel_in_region_bool = pd.Series(fuel_stations.geometry.within(boundaries.geometry[region_key]), name='Bool')
+    fuel_in_region_bool = pd.Series(fuel_stations.geometry.within(boundaries.geometry[region_key]), name='bool')
     fuel_stations = fuel_stations.join(fuel_in_region_bool)
 
     # add empty column for Traffic
-    data = np.zeros(anz_fuel_stations)
+    data = np.zeros(len(fuel_stations))
     traffic = pd.Series(data, name='traffic')
     fuel_stations = fuel_stations.join(traffic)
 
     # locate fuelstations in region
-    fs = fuel_stations.loc[fuel_stations['Bool'] == 1]
+    fs = fuel_stations.loc[fuel_stations['bool'] == 1]
 
     x = np.arange(0, len(fs))
     fs = fs.assign(INDEX=x)
@@ -54,7 +53,7 @@ def uc1_hpc(
         energy_sum_per_fs = pd.Series(data, name='energysum')
         fs = fs.join(energy_sum_per_fs)
 
-        load_power = timeseries.loc[:, 'sum UC hub']  # TODO use all sum columns
+        load_power = timeseries.loc[:, 'sum UC hub']
         load_power.name = 'loadpower_hpc'
         load_power = pd.to_numeric(load_power)
         energy_sum = load_power*15/60  # Ladeleistung in Energie umwandeln
@@ -84,8 +83,8 @@ def uc1_hpc(
     return fs
 
 
-def uc2_public(
-        public, boundaries,
+def public(
+        public_data, boundaries,
         timeseries, poi,
         region, region_key):
 
@@ -93,8 +92,8 @@ def uc2_public(
     uc_id = 'Use_Case_2_Public_Slow'
 
     # get poi's in region
-    public_in_region_bool = pd.Series(public.geometry.within(boundaries.geometry[region_key]), name='Bool')
-    public_in_region = public.join(public_in_region_bool)
+    public_in_region_bool = pd.Series(public_data.geometry.within(boundaries.geometry[region_key]), name='Bool')
+    public_in_region = public_data.join(public_in_region_bool)
     pir = public_in_region.loc[public_in_region['Bool'] == 1]   # pir = public in region
 
     anz_pir = len(pir)
@@ -102,7 +101,7 @@ def uc2_public(
     es = pd.Series(data, name='energysum')
     pir = pir.join(es)
 
-    load_power = timeseries.loc[:, 'sum UC leisure']
+    load_power = timeseries.loc[:, 'sum UC leisure']  # TODO: add columns
     load_power.name = 'chargepower_public'
     load_power = pd.to_numeric(load_power)
     energy_sum = load_power * 15 / 60  # Ladeleistung in Energie umwandeln
@@ -162,7 +161,7 @@ def uc2_public(
     utility.save(pir, uc_id, col_select, region_key)
 
 
-def uc3_home(
+def home(
         zensus, boundaries,
         timeseries, region,
         region_key):
@@ -210,7 +209,7 @@ def uc3_home(
     return zensus
 
 
-def uc4_work(work, boundaries,
+def work(work_data, boundaries,
              timeseries, region,
              region_key, weight_retail,
              weight_commercial, weight_industrial):
@@ -219,8 +218,8 @@ def uc4_work(work, boundaries,
     uc_id = 'Use_Case_4_Private_Work'
 
     # getting pois of area
-    work_in_region_bool = pd.Series(work.geometry.within(boundaries.geometry[region_key]), name='Bool')
-    work_in_region = work.join(work_in_region_bool)
+    work_in_region_bool = pd.Series(work_data.geometry.within(boundaries.geometry[region_key]), name='Bool')
+    work_in_region = work_data.join(work_in_region_bool)
     wir = work_in_region.loc[work_in_region['Bool'] == 1]  # wir = work in region
 
     anz_wir = len(wir)

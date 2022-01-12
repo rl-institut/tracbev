@@ -27,10 +27,10 @@ def parse_data(args):
     timeseries_csv = parser.get('data', 'timeseries_csv')
     timeseries_format = parser.get('data', 'timeseries_format')
     sep_dict = {'simbev': ',', 'spiceev': ';'}
-    run_uc1 = parser.getboolean('basic', 'uc1_hpc')
-    run_uc2 = parser.getboolean('basic', 'uc2_public')
-    run_uc3 = parser.getboolean('basic', 'uc3_home')
-    run_uc4 = parser.getboolean('basic', 'uc4_work')
+    run_hpc = parser.getboolean('use_cases', 'hpc')
+    run_public = parser.getboolean('use_cases', 'public')
+    run_home = parser.getboolean('use_cases', 'home')
+    run_work = parser.getboolean('use_cases', 'work')
 
     # always used parameters
     boundaries = gpd.read_file(os.path.join(data_dir, 'boundaries.gpkg'))
@@ -56,39 +56,39 @@ def parse_data(args):
         'boundaries': boundaries,
         'timeseries': timeseries,
         'region_key': region_key,
-        'run_uc1': run_uc1,
-        'run_uc2': run_uc2,
-        'run_uc3': run_uc3,
-        'run_uc4': run_uc4,
+        'run_hpc': run_hpc,
+        'run_public': run_public,
+        'run_home': run_home,
+        'run_work': run_work,
     }
 
-    if run_uc1:
-        uc1_radius = int(parser.get('uc_params', 'uc1_radius'))
+    if run_hpc:
+        hpc_radius = int(parser.get('uc_params', 'hpc_radius'))
         fuel_stations = gpd.read_file(os.path.join(data_dir, 'fuel_stations.gpkg'))
         traffic = gpd.read_file(os.path.join(data_dir, 'berlin_verkehr.gpkg'))
         traffic = traffic.to_crs(3035)  # transform to reference Coordinate System
-        config_dict.update({'uc1_radius': uc1_radius, 'fuel_stations': fuel_stations, 'traffic': traffic})
+        config_dict.update({'hpc_radius': hpc_radius, 'fuel_stations': fuel_stations, 'traffic': traffic})
 
-    if run_uc2:
+    if run_public:
         public = gpd.read_file(os.path.join(data_dir, 'osm_poi_elia.gpkg'))
 
         poi = pd.read_csv(os.path.join(data_dir, '2020-12-02_OSM_POI_Gewichtung.csv'), sep=';')
         config_dict.update({'public': public, 'poi': poi})
 
-    if run_uc3:
+    if run_home:
         zensus_data = gpd.read_file(
             os.path.join(data_dir, 'destatis_zensus_population_per_ha_filtered.gpkg'))
         zensus_data = zensus_data.to_crs(3035)
         zensus = zensus_data.iloc[:, 2:5]
         config_dict['zensus'] = zensus
 
-    if run_uc4:
-        uc4_retail = float(parser.get('uc_params', 'uc4_weight_retail'))
-        uc4_commercial = float(parser.get('uc_params', 'uc4_weight_commercial'))
-        uc4_industrial = float(parser.get('uc_params', 'uc4_weight_industrial'))
+    if run_work:
+        work_retail = float(parser.get('uc_params', 'work_weight_retail'))
+        work_commercial = float(parser.get('uc_params', 'work_weight_commercial'))
+        work_industrial = float(parser.get('uc_params', 'work_weight_industrial'))
         work = gpd.read_file(os.path.join(data_dir, 'landuse.gpkg'))
-        config_dict.update({'retail': uc4_retail, 'commercial': uc4_commercial,
-                            'industrial': uc4_industrial, 'work': work})
+        config_dict.update({'retail': work_retail, 'commercial': work_commercial,
+                            'industrial': work_industrial, 'work': work})
 
     return config_dict
 
@@ -106,26 +106,26 @@ def run_tracbev(data_dict):
         region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
 
         # Start Use Cases
-        if data_dict['run_uc1']:
-            fs = uc.uc1_hpc(data_dict['fuel_stations'], bounds,
-                            ts, data_dict['traffic'],
-                            region, key, data_dict['uc1_radius'])
+        if data_dict['run_hpc']:
+            fs = uc.hpc(data_dict['fuel_stations'], bounds,
+                        ts, data_dict['traffic'],
+                        region, key, data_dict['hpc_radius'])
 
-        if data_dict['run_uc2']:
-            pu = uc.uc2_public(data_dict['public'], bounds,
-                               ts, data_dict['poi'],
-                               region, key)
+        if data_dict['run_public']:
+            pu = uc.public(data_dict['public'], bounds,
+                           ts, data_dict['poi'],
+                           region, key)
 
-        if data_dict['run_uc3']:
-            pl = uc.uc3_home(data_dict['zensus'], bounds,
-                             ts, region,
-                             key)
+        if data_dict['run_home']:
+            pl = uc.home(data_dict['zensus'], bounds,
+                         ts, region,
+                         key)
 
-        if data_dict['run_uc4']:
-            pw = uc.uc4_work(data_dict['work'], bounds,
-                             ts, region,
-                             key, data_dict['retail'],
-                             data_dict['commercial'], data_dict['industrial'])
+        if data_dict['run_work']:
+            pw = uc.work(data_dict['work'], bounds,
+                         ts, region,
+                         key, data_dict['retail'],
+                         data_dict['commercial'], data_dict['industrial'])
 
 
 if __name__ == '__main__':
@@ -133,7 +133,7 @@ if __name__ == '__main__':
 
     argparser = argparse.ArgumentParser(description='TracBEV tool for allocation of charging infrastructure')
     argparser.add_argument('config', default="tracbev_config.cfg", nargs='?',
-                        help='Set the config which is located in ./scenarios .')
+                           help='Set the config which is located in ./scenarios .')
     p_args = argparser.parse_args()
 
     data = parse_data(p_args)
