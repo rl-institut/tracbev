@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import configparser as cp
 import os
 import argparse
+from datetime import datetime
 
 import use_cases as uc
 import utility
@@ -65,19 +66,19 @@ def parse_data(args):
     if run_hpc:
         hpc_radius = int(parser.get('uc_params', 'hpc_radius'))
         fuel_stations = gpd.read_file(os.path.join(data_dir, 'fuel_stations.gpkg'))
-        traffic = gpd.read_file(os.path.join(data_dir, 'berlin_verkehr.gpkg'))
+        traffic = gpd.read_file(os.path.join(data_dir, 'berlin_traffic.gpkg'))
         traffic = traffic.to_crs(3035)  # transform to reference Coordinate System
         config_dict.update({'hpc_radius': hpc_radius, 'fuel_stations': fuel_stations, 'traffic': traffic})
 
     if run_public:
         public = gpd.read_file(os.path.join(data_dir, 'osm_poi_elia.gpkg'))
 
-        poi = pd.read_csv(os.path.join(data_dir, '2020-12-02_OSM_POI_Gewichtung.csv'), sep=';', encoding='mbcs')
+        poi = pd.read_csv(os.path.join(data_dir, 'poi_weights.csv'), sep=';', encoding='mbcs')
         config_dict.update({'public': public, 'poi': poi})
 
     if run_home:
         zensus_data = gpd.read_file(
-            os.path.join(data_dir, 'destatis_zensus_population_per_ha_filtered.gpkg'))
+            os.path.join(data_dir, 'zensus.gpkg'))
         zensus_data = zensus_data.to_crs(3035)
         zensus = zensus_data.iloc[:, 2:5]
         config_dict['zensus'] = zensus
@@ -97,9 +98,11 @@ def run_tracbev(data_dict):
     bounds = data_dict['boundaries']
     ts = data_dict['timeseries']
 
-    # create result folder
-    if not os.path.exists('results'):
-        os.makedirs('results')
+    # create result directory
+    timestamp_now = datetime.now()
+    timestamp = timestamp_now.strftime("%y-%m-%d_%H%M%S")
+    result_dir = os.path.join('results', 'tracbev_{}'.format(timestamp))
+    os.makedirs(result_dir, exist_ok=True)
 
     for key in data_dict['region_key']:
         region = bounds.loc[key, 'geometry']
@@ -109,26 +112,26 @@ def run_tracbev(data_dict):
         if data_dict['run_hpc']:
             fs = uc.hpc(data_dict['fuel_stations'], bounds,
                         ts, data_dict['traffic'],
-                        region, key, data_dict['hpc_radius'])
+                        region, key, data_dict['hpc_radius'], result_dir)
 
         if data_dict['run_public']:
             pu = uc.public(data_dict['public'], bounds,
                            ts, data_dict['poi'],
-                           region, key)
+                           region, key, result_dir)
 
         if data_dict['run_home']:
             pl = uc.home(data_dict['zensus'], bounds,
                          ts, region,
-                         key)
+                         key, result_dir)
 
         if data_dict['run_work']:
             pw = uc.work(data_dict['work'], bounds,
                          ts, region,
                          key, data_dict['retail'],
-                         data_dict['commercial'], data_dict['industrial'])
+                         data_dict['commercial'], data_dict['industrial'], result_dir)
 
 
-if __name__ == '__main__':
+def main():
     print('Starting Program for Distribution of Energy...')
 
     argparser = argparse.ArgumentParser(description='TracBEV tool for allocation of charging infrastructure')
@@ -139,3 +142,7 @@ if __name__ == '__main__':
     data = parse_data(p_args)
     run_tracbev(data)
     plt.show()
+
+
+if __name__ == '__main__':
+    main()

@@ -7,9 +7,10 @@ import numpy as np
 def hpc(
         fuel_stations, boundaries,
         timeseries, traffic_data,
-        region, region_key, radius):
+        region, region_key, radius, dir_result):
 
-    uc_id = 'Use_Case_1_Public_Fast'
+    print('Use case: hpc')
+    uc_id = 'hpc'
     # radius = 900  # radius around fuel station for traffic acquisition
 
     # get fuelstations in region
@@ -78,7 +79,7 @@ def hpc(
                        traffic_data, circles)
 
     col_select = ['geometry', 'traffic', 'energysum', 'conversionfactor']
-    utility.save(fs, uc_id, col_select, region_key)
+    utility.save(fs, uc_id, col_select, region_key, dir_result)
 
     return fs
 
@@ -86,10 +87,10 @@ def hpc(
 def public(
         public_data, boundaries,
         timeseries, poi,
-        region, region_key):
+        region, region_key, dir_result):
 
-    print('UC2')
-    uc_id = 'Use_Case_2_Public_Slow'
+    print('Use case: public')
+    uc_id = 'public'
 
     # get poi's in region
     public_in_region_bool = pd.Series(public_data.geometry.within(boundaries.geometry[region_key]), name='Bool')
@@ -158,16 +159,16 @@ def public(
 
     col_select = ['name', 'amenity', 'leisure', 'shop', 'tourism',
                   'geometry', 'energysum', 'weight', 'conversionfactor']
-    utility.save(pir, uc_id, col_select, region_key)
+    utility.save(pir, uc_id, col_select, region_key, dir_result)
 
 
 def home(
         zensus, boundaries,
         timeseries, region,
-        region_key):
+        region_key, dir_result):
 
-    print('UC3')
-    uc_id = 'Use_Case_3_Private_Home'
+    print('Use case: home')
+    uc_id = 'home'
 
     # getting zenusdata in region
     home_in_region_bool = pd.Series(zensus.geometry.within(boundaries.geometry[region_key]), name='Bool')
@@ -204,18 +205,18 @@ def home(
     plots.plot_uc3(hir, region)
 
     col_select = ['population', 'geom_point', 'geometry', 'energysum', 'conversionfactor']
-    utility.save(hir, uc_id, col_select, region_key)
+    utility.save(hir, uc_id, col_select, region_key, dir_result)
 
     return zensus
 
 
 def work(work_data, boundaries,
-             timeseries, region,
-             region_key, weight_retail,
-             weight_commercial, weight_industrial):
+         timeseries, region,
+         region_key, weight_retail,
+         weight_commercial, weight_industrial, dir_result):
 
-    print('UC4')
-    uc_id = 'Use_Case_4_Private_Work'
+    print('Use case: work')
+    uc_id = 'work'
 
     # getting pois of area
     work_in_region_bool = pd.Series(work_data.geometry.within(boundaries.geometry[region_key]), name='Bool')
@@ -275,4 +276,4 @@ def work(work_data, boundaries,
     plots.plot_uc4(wir, region)
 
     col_select = ['landuse', 'geometry', 'center_geo', 'energysum', 'weight', 'conversionfactor']
-    utility.save(wir, uc_id, col_select, region_key)
+    utility.save(wir, uc_id, col_select, region_key, dir_result)
