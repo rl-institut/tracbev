@@ -31,7 +31,7 @@ def load_csv(file, delimiter=';', is_num=False, is_dict=False):
 # save in .csv format
 def save(data: pd.DataFrame, uc, col_select, region_key, save_dir):
 
-    filename = 'output_geo_{}_region_{}.csv'.format(uc, region_key)
+    filename = 'output_{}_{}.csv'.format(uc, region_key)
     path = os.path.join(save_dir, filename)
     data.to_csv(path, sep=';', columns=col_select, decimal=',', index=True)
     print('saving {} in region {} successful'.format(uc, region_key))
