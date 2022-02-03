@@ -5,7 +5,7 @@ import numpy as np
 
 
 def hpc(
-        fuel_stations, boundaries,
+        fuel_stations,
         timeseries, traffic_data,
         region, region_key, radius, dir_result):
 
@@ -14,7 +14,7 @@ def hpc(
     # radius = 900  # radius around fuel station for traffic acquisition
 
     # get fuelstations in region
-    fuel_in_region_bool = pd.Series(fuel_stations.geometry.within(boundaries.geometry[region_key]), name='bool')
+    fuel_in_region_bool = pd.Series(fuel_stations.geometry.within(region.loc[0]), name='bool')
     fuel_stations = fuel_stations.join(fuel_in_region_bool)
 
     # add empty column for Traffic
@@ -75,8 +75,8 @@ def hpc(
     else:
         print('No fast charging possible, because no fuel station in the area!')
     if anz_fs != 0:
-        plots.plot_uc1(fs, region,
-                       traffic_data, circles)
+        plots.plot_hpc(fs, region,
+                       traffic_data)
 
     col_select = ['geometry', 'traffic', 'energysum', 'conversionfactor']
     utility.save(fs, uc_id, col_select, region_key, dir_result)
@@ -85,7 +85,7 @@ def hpc(
 
 
 def public(
-        public_data, boundaries,
+        public_data,
         timeseries, poi,
         region, region_key, dir_result):
 
@@ -93,7 +93,7 @@ def public(
     uc_id = 'public'
 
     # get poi's in region
-    public_in_region_bool = pd.Series(public_data.geometry.within(boundaries.geometry[region_key]), name='Bool')
+    public_in_region_bool = pd.Series(public_data.geometry.within(region.loc[0]), name='Bool')
     public_in_region = public_data.join(public_in_region_bool)
     pir = public_in_region.loc[public_in_region['Bool'] == 1]   # pir = public in region
 
@@ -102,10 +102,12 @@ def public(
     es = pd.Series(data, name='energysum')
     pir = pir.join(es)
 
-    load_power = timeseries.loc[:, 'sum UC leisure']  # TODO: add columns
+    # take all columns from simbev output that are part of the public usecase
+    cols_public = timeseries.columns[-7:-2]
+    load_power = timeseries[cols_public].sum(axis=1)
     load_power.name = 'chargepower_public'
     load_power = pd.to_numeric(load_power)
-    energy_sum = load_power * 15 / 60  # Ladeleistung in Energie umwandeln
+    energy_sum = load_power * 15 / 60  # Ladeleistung in Energie umwandeln TODO: get timestep from simbev run metadata
 
     energy_sum_overall = energy_sum.sum()
     print(energy_sum_overall, 'kWh got charged at public space in region', region_key)
@@ -155,7 +157,7 @@ def public(
     pir['energysum'] = utility.apportion(pir['weight'], energy_sum_overall)
     pir['conversionfactor'] = pir['energysum'] / energy_sum_overall
 
-    plots.plot_uc2(pir, region)
+    plots.plot_public(pir, region)
 
     col_select = ['name', 'amenity', 'leisure', 'shop', 'tourism',
                   'geometry', 'energysum', 'weight', 'conversionfactor']
@@ -163,7 +165,7 @@ def public(
 
 
 def home(
-        zensus, boundaries,
+        zensus,
         timeseries, region,
         region_key, dir_result):
 
@@ -171,7 +173,7 @@ def home(
     uc_id = 'home'
 
     # getting zenusdata in region
-    home_in_region_bool = pd.Series(zensus.geometry.within(boundaries.geometry[region_key]), name='Bool')
+    home_in_region_bool = pd.Series(zensus.geometry.within(region.loc[0]), name='Bool')
     home_in_region = zensus.join(home_in_region_bool)
     hir = home_in_region.loc[home_in_region['Bool'] == 1]   # hir = home in region
 
@@ -202,7 +204,7 @@ def home(
 
     hir['energysum'] = utility.apportion(hir['conversionfactor'], energy_sum_overall)
 
-    plots.plot_uc3(hir, region)
+    plots.plot_home(hir, region)
 
     col_select = ['population', 'geom_point', 'geometry', 'energysum', 'conversionfactor']
     utility.save(hir, uc_id, col_select, region_key, dir_result)
@@ -210,7 +212,7 @@ def home(
     return zensus
 
 
-def work(work_data, boundaries,
+def work(work_data,
          timeseries, region,
          region_key, weight_retail,
          weight_commercial, weight_industrial, dir_result):
@@ -219,7 +221,7 @@ def work(work_data, boundaries,
     uc_id = 'work'
 
     # getting pois of area
-    work_in_region_bool = pd.Series(work_data.geometry.within(boundaries.geometry[region_key]), name='Bool')
+    work_in_region_bool = pd.Series(work_data.geometry.within(region.loc[0]), name='Bool')
     work_in_region = work_data.join(work_in_region_bool)
     wir = work_in_region.loc[work_in_region['Bool'] == 1]  # wir = work in region
 
@@ -273,7 +275,7 @@ def work(work_data, boundaries,
 
     wir['center_geo'] = wir.centroid
 
-    plots.plot_uc4(wir, region)
+    plots.plot_work(wir, region)
 
     col_select = ['landuse', 'geometry', 'center_geo', 'energysum', 'weight', 'conversionfactor']
     utility.save(wir, uc_id, col_select, region_key, dir_result)

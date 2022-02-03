@@ -1,19 +1,18 @@
 import matplotlib.pyplot as plt
 
 
-# plot use case 1
-def plot_uc1(fuel_stations, boundaries, traffic, circles):
+# plot hpc
+def plot_hpc(fuel_stations, boundaries, traffic):
     fig, ax = plt.subplots()
     ax.set_aspect('equal')
 
-    # circles.plot(ax=ax)
     traffic.plot(ax=ax)
     fuel_stations.plot(ax=ax, marker='o', color='red', markersize=5)
     boundaries.boundary.plot(ax=ax, color='black', edgecolor='black')
 
 
-# plot use case 2
-def plot_uc2(pir, boundaries):
+# plot public
+def plot_public(pir, boundaries):
     fig, ax = plt.subplots()
 
     ax.set_aspect('equal')
@@ -23,7 +22,7 @@ def plot_uc2(pir, boundaries):
 
 
 # plot use case 3
-def plot_uc3(wir, boundaries):
+def plot_home(wir, boundaries):
     fig, ax = plt.subplots()
 
     ax.set_aspect('equal')
@@ -34,7 +33,7 @@ def plot_uc3(wir, boundaries):
 
 
 # plot use case 4
-def plot_uc4(wir, boundaries):
+def plot_work(wir, boundaries):
     fig, ax = plt.subplots()
 
     ax.set_aspect('equal')

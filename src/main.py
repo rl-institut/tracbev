@@ -110,22 +110,22 @@ def run_tracbev(data_dict):
 
         # Start Use Cases
         if data_dict['run_hpc']:
-            fs = uc.hpc(data_dict['fuel_stations'], bounds,
+            fs = uc.hpc(data_dict['fuel_stations'],
                         ts, data_dict['traffic'],
                         region, key, data_dict['hpc_radius'], result_dir)
 
         if data_dict['run_public']:
-            pu = uc.public(data_dict['public'], bounds,
+            pu = uc.public(data_dict['public'],
                            ts, data_dict['poi'],
                            region, key, result_dir)
 
         if data_dict['run_home']:
-            pl = uc.home(data_dict['zensus'], bounds,
+            pl = uc.home(data_dict['zensus'],
                          ts, region,
                          key, result_dir)
 
         if data_dict['run_work']:
-            pw = uc.work(data_dict['work'], bounds,
+            pw = uc.work(data_dict['work'],
                          ts, region,
                          key, data_dict['retail'],
                          data_dict['commercial'], data_dict['industrial'], result_dir)
