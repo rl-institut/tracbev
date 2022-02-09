@@ -2,86 +2,54 @@ import plots
 import utility
 import pandas as pd
 import numpy as np
+import geopandas as gpd
+import math
 
 
-def hpc(
-        fuel_stations,
-        timeseries, traffic_data,
-        region, region_key, radius, dir_result):
-
-    print('Use case: hpc')
+def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
+        region, region_key, dir_result, min_power=150, timestep=15):
     uc_id = 'hpc'
-    # radius = 900  # radius around fuel station for traffic acquisition
+    print('Use case: ', uc_id)
 
-    # get fuelstations in region
-    fuel_in_region_bool = pd.Series(fuel_stations.geometry.within(region.loc[0]), name='bool')
-    fuel_stations = fuel_stations.join(fuel_in_region_bool)
+    # get hpc charging series
+    load = charging_series["sum hpc"]
+    load_sum = load.sum()
+    energy_sum = load_sum * timestep / 60
+    load_peak = load.max()
+    num_hpc = math.ceil(load_peak / min_power)
 
-    # add empty column for Traffic
-    data = np.zeros(len(fuel_stations))
-    traffic = pd.Series(data, name='traffic')
-    fuel_stations = fuel_stations.join(traffic)
+    if num_hpc > 0:
+        # filter hpc points by region
+        in_region_bool = hpc_points["geometry"].within(region.loc[0])
+        in_region = hpc_points.loc[in_region_bool]
+        in_region = in_region.loc[in_region["has_hpc"]]
+        cols = ["geometry", "hpc_count", "potential", "new_hpc_index", "new_hpc_tag"]
+        in_region = in_region[cols]
+        # select all hpc points tagged 0, all registered points
+        real_mask = in_region["new_hpc_tag"] == 0
+        real_in_region = in_region[real_mask]
+        num_hpc_real = real_in_region["hpc_count"].sum()
 
-    # locate fuelstations in region
-    fs = fuel_stations.loc[fuel_stations['bool'] == 1]
+        if num_hpc_real < num_hpc:
+            sim_in_region = in_region.loc[~real_mask]
+            sim_in_region = sim_in_region.loc[in_region["new_hpc_index"] > 0]
+            sim_in_region_sorted = sim_in_region.sort_values("potential")
+            additional_hpc = int(min(num_hpc - num_hpc_real, len(sim_in_region.index)-1))
+            selected_hpc = sim_in_region_sorted[:additional_hpc]
+            real_in_region = real_in_region.append(selected_hpc)
 
-    x = np.arange(0, len(fs))
-    fs = fs.assign(INDEX=x)
-    fs.set_index('INDEX', inplace=True)
+        total_potential = real_in_region["potential"].sum()
+        real_in_region["share_%"] = real_in_region["potential"] / total_potential * 100
+        real_in_region["share_%"] = real_in_region["share_%"].round(4)
 
-    # Calculating distribution Weights for Fuel Stations
-    circles = fs.buffer(radius)
-
-    anz_fs = len(fs)
-
-    # Loop for calculating weight by using the appr. daily Traffic around Fuel Station
-    i = 0
-    while i < anz_fs:
-        # Trafficdata inside a radius of 900 around Fuel Station
-        traffic_around_fs = pd.Series(traffic_data.geometry.within(circles.geometry.iloc[i]), name='Bool')
-        traffic_bool = traffic_data.join(traffic_around_fs)
-        traffic_around_fs_true = traffic_data.loc[traffic_bool['Bool'] == 1]
-        traffic_sum = traffic_around_fs_true['dtv'].sum()
-        fs.iloc[i, 4] = traffic_sum
-
-        i += 1
-
-    anz_fs = len(fs)
-
-    # Distribution of Energy
-    if anz_fs > 0:
-        data = np.zeros(anz_fs,)
-        energy_sum_per_fs = pd.Series(data, name='energysum')
-        fs = fs.join(energy_sum_per_fs)
-
-        load_power = timeseries.loc[:, 'sum UC hub']
-        load_power.name = 'loadpower_hpc'
-        load_power = pd.to_numeric(load_power)
-        energy_sum = load_power*15/60  # Ladeleistung in Energie umwandeln
-
-        energy_sum_overall = energy_sum.sum()
-        print(energy_sum_overall, 'kWh got fastcharged in region ', region_key)
-
-        # sort descending by traffic
-        fs = fs.sort_values(by=['traffic'], ascending=False)
-
-        x = np.arange(0, len(fs))
-        fs = fs.assign(INDEX=x)
-        fs.set_index('INDEX', inplace=True)
-
-        fs['energysum'] = utility.apportion(fs['traffic'], energy_sum_overall)
-        fs['conversionfactor'] = fs['energysum'] / energy_sum_overall
-
+        # outputs
+        print(energy_sum, "kWh got fastcharged in region")
+        plots.plot_uc(uc_id, real_in_region, region, dir_result)
+        cols.remove("new_hpc_tag")
+        cols.append("share_%")
+        utility.save(real_in_region, uc_id, cols, region_key, dir_result)
     else:
-        print('No fast charging possible, because no fuel station in the area!')
-    if anz_fs != 0:
-        plots.plot_hpc(fs, region,
-                       traffic_data)
-
-    col_select = ['geometry', 'traffic', 'energysum', 'conversionfactor']
-    utility.save(fs, uc_id, col_select, region_key, dir_result)
-
-    return fs
+        print("No hpc in charging timeseries")
 
 
 def public(
