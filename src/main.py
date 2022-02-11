@@ -6,7 +6,7 @@ import os
 import argparse
 from datetime import datetime
 
-import use_cases as uc
+import usecase as uc
 import utility
 
 
@@ -42,6 +42,7 @@ def parse_data(args):
     timeseries = pd.read_csv(os.path.join(data_dir, 'charging_timeseries', timeseries_csv),
                              sep=sep_dict[timeseries_format])
 
+    # TODO: use pandas?
     region_data = utility.load_csv(os.path.join(data_dir, region_csv))
     region_key = [''] * len(region_data)
     i = 0
@@ -64,11 +65,9 @@ def parse_data(args):
     }
 
     if run_hpc:
-        hpc_radius = int(parser.get('uc_params', 'hpc_radius'))
-        fuel_stations = gpd.read_file(os.path.join(data_dir, 'fuel_stations.gpkg'))
-        traffic = gpd.read_file(os.path.join(data_dir, 'berlin_traffic.gpkg'))
-        traffic = traffic.to_crs(3035)  # transform to reference Coordinate System
-        config_dict.update({'hpc_radius': hpc_radius, 'fuel_stations': fuel_stations, 'traffic': traffic})
+        hpc_pos_file = parser.get('data', 'hpc_positions')
+        positions = gpd.read_file(os.path.join(data_dir, hpc_pos_file))
+        config_dict["hpc_points"] = positions
 
     if run_public:
         public = gpd.read_file(os.path.join(data_dir, 'osm_poi_elia.gpkg'))
@@ -110,9 +109,7 @@ def run_tracbev(data_dict):
 
         # Start Use Cases
         if data_dict['run_hpc']:
-            fs = uc.hpc(data_dict['fuel_stations'],
-                        ts, data_dict['traffic'],
-                        region, key, data_dict['hpc_radius'], result_dir)
+            uc.hpc(data_dict['hpc_points'], ts, region, key, result_dir)
 
         if data_dict['run_public']:
             pu = uc.public(data_dict['public'],

@@ -1,46 +1,25 @@
 import matplotlib.pyplot as plt
+import pathlib
 
 
 # plot hpc
-def plot_hpc(fuel_stations, boundaries, traffic):
+def plot_uc(use_case, charge_points, boundaries, save_dir):
     fig, ax = plt.subplots()
     ax.set_aspect('equal')
+    # charge point plotting differs per use case
+    if use_case == "hpc":
+        charge_points.plot(ax=ax, marker='o', color='red', markersize=5)
+    elif use_case == "public":
+        charge_points.plot(ax=ax, marker='o', markersize=5, legend='false')
+    elif use_case == "home":
+        charge_points.plot(column='population', ax=ax, marker='o', markersize=5, legend='true',
+                           legend_kwds={'label': "Energysum per 100m square"}, cmap='Reds')  # scheme='quantiles'
+    elif use_case == "work":
+        charge_points.plot(column='energysum', ax=ax, marker='o', markersize=5, legend='true',
+                           legend_kwds={'label': "Energysum in area in kWh"})
 
-    traffic.plot(ax=ax)
-    fuel_stations.plot(ax=ax, marker='o', color='red', markersize=5)
     boundaries.boundary.plot(ax=ax, color='black', edgecolor='black')
-
-
-# plot public
-def plot_public(pir, boundaries):
-    fig, ax = plt.subplots()
-
-    ax.set_aspect('equal')
-
-    pir.plot(ax=ax, marker='o', markersize=5, legend='false')
-    boundaries.boundary.plot(ax=ax, color='black', edgecolor='black')
-
-
-# plot use case 3
-def plot_home(wir, boundaries):
-    fig, ax = plt.subplots()
-
-    ax.set_aspect('equal')
-
-    wir.plot(column='population', ax=ax, marker='o', markersize=5, legend='true',
-             legend_kwds={'label': "Energysum per 100m square"}, cmap='Reds')  # scheme='quantiles'
-    boundaries.boundary.plot(ax=ax, color='black', edgecolor='black')
-
-
-# plot use case 4
-def plot_work(wir, boundaries):
-    fig, ax = plt.subplots()
-
-    ax.set_aspect('equal')
-
-    wir.plot(column='energysum', ax=ax, marker='o', markersize=5, legend='true',
-             legend_kwds={'label': "Energysum in area in kWh"})
-    boundaries.boundary.plot(ax=ax, color='black', edgecolor='black')
+    plt.savefig(pathlib.Path(save_dir, use_case + "_plot.svg"), bbox_inches='tight')
 
 
 def plot_energy_sum(energysum):

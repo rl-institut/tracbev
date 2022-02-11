@@ -33,7 +33,7 @@ def save(data: pd.DataFrame, uc, col_select, region_key, save_dir):
 
     filename = 'output_{}_{}.csv'.format(uc, region_key)
     path = os.path.join(save_dir, filename)
-    data.to_csv(path, sep=';', columns=col_select, decimal=',', index=True)
+    data.to_csv(path, sep=';', columns=col_select, decimal='.', index=True)
     print('saving {} in region {} successful'.format(uc, region_key))
 
 
