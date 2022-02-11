@@ -12,7 +12,7 @@ def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
     print('Use case: ', uc_id)
 
     # get hpc charging series
-    load = charging_series["sum hpc"]
+    load = charging_series.loc[:, "sum hpc"]
     load_sum = load.sum()
     energy_sum = load_sum * timestep / 60
     load_peak = load.max()
@@ -22,25 +22,26 @@ def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
         # filter hpc points by region
         in_region_bool = hpc_points["geometry"].within(region.loc[0])
         in_region = hpc_points.loc[in_region_bool]
-        in_region = in_region.loc[in_region["has_hpc"]]
+        if "has_hpc" in in_region.columns:
+            in_region = in_region.loc[in_region["has_hpc"]]
         cols = ["geometry", "hpc_count", "potential", "new_hpc_index", "new_hpc_tag"]
         in_region = in_region[cols]
         # select all hpc points tagged 0, all registered points
         real_mask = in_region["new_hpc_tag"] == 0
-        real_in_region = in_region[real_mask]
+        real_in_region = in_region.loc[real_mask]
         num_hpc_real = real_in_region["hpc_count"].sum()
 
         if num_hpc_real < num_hpc:
             sim_in_region = in_region.loc[~real_mask]
             sim_in_region = sim_in_region.loc[in_region["new_hpc_index"] > 0]
             sim_in_region_sorted = sim_in_region.sort_values("potential")
-            additional_hpc = int(min(num_hpc - num_hpc_real, len(sim_in_region.index)-1))
-            selected_hpc = sim_in_region_sorted[:additional_hpc]
+            additional_hpc = int(min(num_hpc - num_hpc_real, len(sim_in_region.index)))
+            selected_hpc = sim_in_region_sorted.iloc[:additional_hpc]
             real_in_region = real_in_region.append(selected_hpc)
 
         total_potential = real_in_region["potential"].sum()
-        real_in_region["share_%"] = real_in_region["potential"] / total_potential * 100
-        real_in_region["share_%"] = real_in_region["share_%"].round(4)
+        real_in_region.loc[:, "share_%"] = real_in_region.loc[:, "potential"] / total_potential * 100
+        real_in_region.loc[:, "share_%"] = real_in_region.loc[:, "share_%"].round(4)
 
         # outputs
         print(energy_sum, "kWh got fastcharged in region")
