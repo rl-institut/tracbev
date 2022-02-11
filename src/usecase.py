@@ -8,6 +8,24 @@ import math
 
 def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
         region, region_key, dir_result, min_power=150, timestep=15):
+    """
+    Calculate placements and energy distribution for use case hpc.
+
+    :param hpc_points:
+        GeoDataFrame of possible hpc locations
+    :param charging_series:
+        DataFrame with required power per use case over time
+    :param region:
+        GeoSeries of region boundaries
+    :param region_key:
+        str of region key
+    :param dir_result:
+        str of result directory
+    :param min_power:
+        used to calculate needed charging points, default 150
+    :param timestep:
+        timestep of charging_series, default 15
+    """
     uc_id = 'hpc'
     print('Use case: ', uc_id)
 
