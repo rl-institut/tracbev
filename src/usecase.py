@@ -40,14 +40,13 @@ def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
             real_in_region = real_in_region.append(selected_hpc)
 
         total_potential = real_in_region["potential"].sum()
-        real_in_region.loc[:, "share_%"] = real_in_region.loc[:, "potential"] / total_potential * 100
-        real_in_region.loc[:, "share_%"] = real_in_region.loc[:, "share_%"].round(4)
+        real_in_region = real_in_region.assign(share=real_in_region["potential"] / total_potential).round(6)
 
         # outputs
         print(energy_sum, "kWh got fastcharged in region")
         plots.plot_uc(uc_id, real_in_region, region, dir_result)
         cols.remove("new_hpc_tag")
-        cols.append("share_%")
+        cols.append("share")
         utility.save(real_in_region, uc_id, cols, region_key, dir_result)
     else:
         print("No hpc in charging timeseries")
