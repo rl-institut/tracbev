@@ -19,3 +19,4 @@ For now it can be requested from us directly.
 
 After adding the data directory in your local clone, simply run `main.py`.
 
+As default, this run uses the `tracbev_config.cfg` in the `scenarios` directory. `main.py` takes a file name as an optional parameter, which allows the use of new config files. 
