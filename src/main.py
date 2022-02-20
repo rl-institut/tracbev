@@ -70,10 +70,12 @@ def parse_data(args):
         config_dict["hpc_points"] = positions
 
     if run_public:
-        public = gpd.read_file(os.path.join(data_dir, 'osm_poi_elia.gpkg'))
-
-        poi = pd.read_csv(os.path.join(data_dir, 'poi_weights.csv'), sep=';', encoding='mbcs')
-        config_dict.update({'public': public, 'poi': poi})
+        public_data = gpd.read_file(os.path.join(data_dir, 'osm_poi_elia.gpkg'))
+        public_pos_file = parser.get('data', 'public_positions')
+        public_positions = gpd.read_file(os.path.join(data_dir, public_pos_file))
+        poi_weights = pd.read_csv(os.path.join(data_dir, 'poi_weights.csv'), sep=';', encoding='mbcs')
+        weights_dict = utility.weights_to_dict(poi_weights)
+        config_dict.update({'poi_data': public_data, 'poi_weights': weights_dict, 'public_positions': public_positions})
 
     if run_home:
         zensus_data = gpd.read_file(
@@ -112,9 +114,9 @@ def run_tracbev(data_dict):
             uc.hpc(data_dict['hpc_points'], ts, region, key, result_dir)
 
         if data_dict['run_public']:
-            pu = uc.public(data_dict['public'],
-                           ts, data_dict['poi'],
-                           region, key, result_dir)
+            uc.public(data_dict['public_positions'], data_dict['poi_data'],
+                      ts, data_dict['poi_weights'],
+                      region, key, result_dir)
 
         if data_dict['run_home']:
             pl = uc.home(data_dict['zensus'],
