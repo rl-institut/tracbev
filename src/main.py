@@ -32,6 +32,7 @@ def parse_data(args):
     run_public = parser.getboolean('use_cases', 'public')
     run_home = parser.getboolean('use_cases', 'home')
     run_work = parser.getboolean('use_cases', 'work')
+    visual = parser.getboolean("basic", "plots")
 
     # always used parameters
     boundaries = gpd.read_file(os.path.join(data_dir, 'boundaries.gpkg'))
@@ -50,18 +51,23 @@ def parse_data(args):
         region_key[i] = region_data.loc[i, 'AGS']
         i += 1
 
-    anz_regions = len(region_key)
-    print('Number of Regions set:', anz_regions)
+    num_regions = len(region_key)
+    print('Number of Regions set:', num_regions)
     print('AGS Region_Key is set to:', region_key)
+
+    uc_dict = {
+        'timeseries': timeseries,
+        'region_key': region_key,
+        'visual': visual
+    }
 
     config_dict = {
         'boundaries': boundaries,
-        'timeseries': timeseries,
-        'region_key': region_key,
         'run_hpc': run_hpc,
         'run_public': run_public,
         'run_home': run_home,
         'run_work': run_work,
+        'uc_dict': uc_dict
     }
 
     if run_hpc:
@@ -97,7 +103,6 @@ def parse_data(args):
 
 def run_tracbev(data_dict):
     bounds = data_dict['boundaries']
-    ts = data_dict['timeseries']
 
     # create result directory
     timestamp_now = datetime.now()
@@ -108,26 +113,25 @@ def run_tracbev(data_dict):
     for key in data_dict['region_key']:
         region = bounds.loc[key, 'geometry']
         region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
-
+        run_dict = data_dict['uc_dict']
+        run_dict.update({'result_dir': result_dir, 'region': region, 'region_key': key})
         # Start Use Cases
         if data_dict['run_hpc']:
-            uc.hpc(data_dict['hpc_points'], ts, region, key, result_dir)
+            uc.hpc(data_dict['hpc_points'], run_dict)
 
         if data_dict['run_public']:
             uc.public(data_dict['public_positions'], data_dict['poi_data'],
-                      ts, data_dict['poi_weights'],
-                      region, key, result_dir)
+                      data_dict['poi_weights'],
+                      run_dict)
 
         if data_dict['run_home']:
             pl = uc.home(data_dict['zensus'],
-                         ts, region,
-                         key, result_dir)
+                         run_dict)
 
         if data_dict['run_work']:
             pw = uc.work(data_dict['work'],
-                         ts, region,
-                         key, data_dict['retail'],
-                         data_dict['commercial'], data_dict['industrial'], result_dir)
+                         data_dict['retail'],
+                         data_dict['commercial'], data_dict['industrial'], run_dict)
 
 
 def main():

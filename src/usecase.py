@@ -7,21 +7,15 @@ import math
 import usecase_helpers
 
 
-def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
-        region, region_key, dir_result, min_power=150, timestep=15):
+def hpc(hpc_points: gpd.GeoDataFrame,
+        uc_dict, min_power=150, timestep=15):
     """
     Calculate placements and energy distribution for use case hpc.
 
     :param hpc_points:
         GeoDataFrame of possible hpc locations
-    :param charging_series:
-        DataFrame with required power per use case over time
-    :param region:
-        GeoSeries of region boundaries
-    :param region_key:
-        str of region key
-    :param dir_result:
-        str of result directory
+    :param uc_dict:
+        Contains basic run info like region boundary and save directory
     :param min_power:
         used to calculate needed charging points, default 150
     :param timestep:
@@ -31,7 +25,7 @@ def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
     print('Use case: ', uc_id)
 
     # get hpc charging series
-    load = charging_series.loc[:, "sum hpc"]
+    load = uc_dict['timeseries'].loc[:, "sum hpc"]
     load_sum = load.sum()
     energy_sum = load_sum * timestep / 60
     load_peak = load.max()
@@ -39,7 +33,7 @@ def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
 
     if num_hpc > 0:
         # filter hpc points by region
-        in_region_bool = hpc_points["geometry"].within(region.loc[0])
+        in_region_bool = hpc_points["geometry"].within(uc_dict["region"].loc[0])
         in_region = hpc_points.loc[in_region_bool]
         if "has_hpc" in in_region.columns:
             in_region = in_region.loc[in_region["has_hpc"]]
@@ -63,22 +57,23 @@ def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
 
         # outputs
         print(energy_sum, "kWh got fastcharged in region")
-        plots.plot_uc(uc_id, real_in_region, region, dir_result)
+        if uc_dict["visual"]:
+            plots.plot_uc(uc_id, real_in_region, uc_dict)
         cols.remove("new_hpc_tag")
         cols.append("share")
-        utility.save(real_in_region, uc_id, cols, region_key, dir_result)
+        utility.save(real_in_region, uc_id, cols, uc_dict)
     else:
         print("No hpc charging in timeseries")
 
 
 def public(
-        public_points: gpd.GeoDataFrame, public_data: gpd.GeoDataFrame, charging_series: pd.DataFrame,
-        region, region_key, dir_result, timestep=15, avg_power=1):
+        public_points: gpd.GeoDataFrame, public_data: gpd.GeoDataFrame,
+        uc_dict, timestep=15, avg_power=11):
 
     uc_id = "public"
     print("Use case: " + uc_id)
 
-    load = charging_series.loc[:, "sum public"]
+    load = uc_dict["timeseries"].loc[:, "sum public"]
     load_sum = load.sum()
     energy_sum = load_sum * timestep / 60
     load_peak = load.max()
@@ -103,16 +98,17 @@ def public(
 
         # outputs
         print(energy_sum, "kWh got charged in region")
-        plots.plot_uc(uc_id, region_points, region, dir_result)
+        if uc_dict["visual"]:
+            plots.plot_uc(uc_id, region_points, uc_dict)
         # TODO check cols
         cols = ["geometry"]
-        utility.save(region_points, uc_id, cols, region_key, dir_result)
+        utility.save(region_points, uc_id, cols, uc_dict)
 
     else:
         print("No public charging in timeseries")
 
 
-def home(
+def home_old(
         zensus,
         timeseries, region,
         region_key, dir_result):
@@ -160,18 +156,19 @@ def home(
     return zensus
 
 
+# TODO weights dict
 def work(
-        landuse, charging_series: pd.DataFrame, weights_dict,
-        region, region_key, dir_result, timestep=15):
+        landuse, weights_dict,
+        uc_dict, timestep=15):
     uc_id = "work"
     print("Use case: " + uc_id)
 
-    load = charging_series.loc[:, "sum work"]
+    load = uc_dict["timeseries"].loc[:, "sum work"]
     load_sum = load.sum()
     energy_sum = load_sum * timestep / 60
     load_peak = load.max()
 
-    in_region = landuse.within(region.loc[0])
+    in_region = landuse.within(uc_dict["region"].loc[0])
 
     # calculating the area of polygons
     in_region["area"] = in_region['geometry'].area / 10 ** 6
@@ -179,10 +176,11 @@ def work(
 
     # outputs
     print(energy_sum, "kWh got charged in region")
-    plots.plot_uc(uc_id, in_region, region, dir_result)
+    if uc_dict["visual"]:
+        plots.plot_uc(uc_id, in_region, uc_dict)
     # TODO check cols
     cols = ["geometry"]
-    utility.save(in_region, uc_id, cols, region_key, dir_result)
+    utility.save(in_region, uc_id, cols, uc_dict)
 
 
 def work_old(work_data,
