@@ -1,5 +1,4 @@
 import geopandas as gpd
-import pandas as pd
 
 
 # used in preprocessing only
@@ -60,21 +59,45 @@ def preprocess_poi(region_poi, weights, max_radius, max_weight, increment):
     return poi_cluster(region_poi, max_radius, max_weight, increment)
 
 
-def distribute_by_poi(
-        region_points: gpd.GeoDataFrame, region_poi: gpd.GeoDataFrame,
-        weights, num_points):
-    # merge cluster info with existing points (total weight of cluster)
+def match_existing_points(
+        region_points: gpd.GeoDataFrame, region_poi: gpd.GeoDataFrame):
+
     region_poi["exists"] = False
+    poi_buffer = region_poi.buffer(region_poi["radius"])
+    region_points["weight"] = 0
     for i in region_points.index:
-        cluster = region_poi.contains(region_points.loc[i, "geometry"])
-        cluster.loc[cluster, "exists"] = True
+        lis_point = region_points.at[i, "geometry"]
+        cluster = poi_buffer.contains(lis_point)
+        clusters = region_poi.loc[cluster]
+        num_clusters = len(clusters.index)
+
+        if num_clusters == 0:
+            # TODO choose appropriate fallback value
+            region_points.at[i, "weight"] = 0
+        elif num_clusters == 1:
+            # region_poi.loc[cluster, "exists"] = True
+            region_points.at[i, "weight"] = clusters["weight"]
+            region_poi.loc[cluster, "exists"] = True
+
+        elif num_clusters > 1:
+            # choose cluster with closest Point
+            dist = clusters.distance(lis_point)
+            idx = dist.idxmin()
+            region_poi.at[idx, "exists"] = True
+            region_points.at[i, "weight"] = clusters.at[idx, "weight"]
+
+    # delete all clusters with exists = True
+    region_poi = region_poi.loc[~region_poi["exists"]]
+
+    return region_points, region_poi
+
+
+def distribute_by_poi(
+        region_poi: gpd.GeoDataFrame,
+        num_points):
     # sort clusters without existing points by weight, then choose highest
     region_poi.sort_values("weight", inplace=True, ascending=False)
-    mask = cluster.loc[:, "exists"]
-    region_poi_exists = cluster[mask]
-    region_poi_available = cluster[~mask]
-    num_points = int(min(num_points, len(region_poi_available.index)))
-    selected_hpc = region_poi_available.iloc[:num_points]
-    result = gpd.GeoDataFrame(pd.concat([region_poi_exists, selected_hpc], ignore_index=True), crs="EPSG:3035")
+    num_points = int(min(num_points, len(region_poi.index)))
+    selected_hpc = region_poi.iloc[:num_points]
     # choose point in cluster thats closest to big street
-    return result
+    return selected_hpc
