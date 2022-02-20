@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import geopandas as gpd
 import math
+import usecase_helpers
 
 
 def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
@@ -67,87 +68,48 @@ def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
         cols.append("share")
         utility.save(real_in_region, uc_id, cols, region_key, dir_result)
     else:
-        print("No hpc in charging timeseries")
+        print("No hpc charging in timeseries")
 
 
 def public(
-        public_data,
-        timeseries, poi,
-        region, region_key, dir_result):
+        public_points: gpd.GeoDataFrame, public_data: gpd.GeoDataFrame, charging_series: pd.DataFrame,
+        region, region_key, dir_result, timestep=15, avg_power=1):
 
-    print('Use case: public')
-    uc_id = 'public'
+    uc_id = "public"
+    print("Use case: " + uc_id)
 
-    # get poi's in region
-    public_in_region_bool = pd.Series(public_data.geometry.within(region.loc[0]), name='Bool')
-    public_in_region = public_data.join(public_in_region_bool)
-    pir = public_in_region.loc[public_in_region['Bool'] == 1]   # pir = public in region
+    load = charging_series.loc[:, "sum public"]
+    load_sum = load.sum()
+    energy_sum = load_sum * timestep / 60
+    load_peak = load.max()
+    num_public = math.ceil(load_peak / avg_power)
+    if num_public > 0:
+        # filter hpc points by region
+        in_region_bool = public_points["geometry"].within(region.loc[0])
+        in_region = public_points.loc[in_region_bool]
+        poi_in_region_bool = public_data["geometry"].within(region.loc[0])
+        poi_in_region = public_data.loc[poi_in_region_bool]
+        num_public_real = in_region["count"].sum()
+        # match with clusters anyway (for weights)
+        region_points, region_poi = usecase_helpers.match_existing_points(in_region, poi_in_region)
 
-    anz_pir = len(pir)
-    data = np.zeros(anz_pir, )
-    es = pd.Series(data, name='energysum')
-    pir = pir.join(es)
+        if num_public_real < num_public:
+            additional_public = num_public - num_public_real
+            # distribute additional public points via POI
+            add_points = usecase_helpers.distribute_by_poi(region_poi, additional_public)
+            region_points = pd.concat(region_points, add_points)
 
-    # take all columns from simbev output that are part of the public usecase
-    cols_public = timeseries.columns[-7:-2]
-    load_power = timeseries[cols_public].sum(axis=1)
-    load_power.name = 'chargepower_public'
-    load_power = pd.to_numeric(load_power)
-    energy_sum = load_power * 15 / 60  # Ladeleistung in Energie umwandeln TODO: get timestep from simbev run metadata
+        # TODO: distribution of energy by weight
 
-    energy_sum_overall = energy_sum.sum()
-    print(energy_sum_overall, 'kWh got charged at public space in region', region_key)
+        # outputs
+        print(energy_sum, "kWh got charged in region")
+        plots.plot_uc(uc_id, region_points, region, dir_result)
+        # TODO check cols
+        cols = ["geometry"]
+        utility.save(region_points, uc_id, cols, region_key, dir_result)
 
-    # distribution of energysum based on weight of poi
-    anz_pir = len(pir)
-    pir['newindex'] = np.arange(anz_pir)
-    pir.set_index('newindex', inplace=True)
-    data = np.zeros(anz_pir)
-    pir['weight'] = pd.Series(data)
-
-    a = pir['amenity']
-    le = pir['leisure']
-    s = pir['shop']
-    t = pir['tourism']
-
-    # extract pois by Key
-    poia = poi.loc[poi['OSM-Key'] == 'amenity']
-    poil = poi.loc[poi['OSM-Key'] == 'leisure']
-    pois = poi.loc[poi['OSM-Key'] == 'shop']
-
-    # combining POI-data and geopackage
-    i = 0
-    while i <= anz_pir - 1:
-        if a.iloc[i] is not None and a.iloc[i] in poia['OSM-Value'].values:
-            data = poia.loc[poi['OSM-Value'] == a.iloc[i], "weight"]
-            pir.iloc[i, 8] = data
-        elif le.iloc[i] is not None and le.iloc[i] in poil['OSM-Value'].values:
-            data = poil.loc[poi['OSM-Value'] == le.iloc[i], "weight"]
-            pir.iloc[i, 8] = data
-        elif s.iloc[i] is not None and s.iloc[i] in pois['OSM-Value'].values:
-            data = pois.loc[poi['OSM-Value'] == s.iloc[i], "weight"]
-            pir.iloc[i, 8] = data
-        elif t.iloc[i] is not None and t.iloc[i] in poi['OSM-Value'].values:
-            pir.iloc[i, 8] = 0
-        else:
-            pir.iloc[i, 8] = 0
-            print('Missing OSM Key in Geopackage-Data for UC2')
-        i += 1
-
-    pir['weight'] = pd.to_numeric(pir['weight'], errors='coerce')
-
-    x = np.arange(0, len(pir))
-    pir = pir.assign(INDEX=x)
-    pir.set_index('INDEX', inplace=True)
-
-    pir['energysum'] = utility.apportion(pir['weight'], energy_sum_overall)
-    pir['conversionfactor'] = pir['energysum'] / energy_sum_overall
-
-    plots.plot_public(pir, region)
-
-    col_select = ['name', 'amenity', 'leisure', 'shop', 'tourism',
-                  'geometry', 'energysum', 'weight', 'conversionfactor']
-    utility.save(pir, uc_id, col_select, region_key, dir_result)
+    else:
+        print("No public charging in timeseries")
 
 
 def home(
@@ -198,7 +160,32 @@ def home(
     return zensus
 
 
-def work(work_data,
+def work(
+        landuse, charging_series: pd.DataFrame, weights_dict,
+        region, region_key, dir_result, timestep=15):
+    uc_id = "work"
+    print("Use case: " + uc_id)
+
+    load = charging_series.loc[:, "sum work"]
+    load_sum = load.sum()
+    energy_sum = load_sum * timestep / 60
+    load_peak = load.max()
+
+    in_region = landuse.within(region.loc[0])
+
+    # calculating the area of polygons
+    in_region["area"] = in_region['geometry'].area / 10 ** 6
+    sum_area = in_region["area"].sum()
+
+    # outputs
+    print(energy_sum, "kWh got charged in region")
+    plots.plot_uc(uc_id, in_region, region, dir_result)
+    # TODO check cols
+    cols = ["geometry"]
+    utility.save(in_region, uc_id, cols, region_key, dir_result)
+
+
+def work_old(work_data,
          timeseries, region,
          region_key, weight_retail,
          weight_commercial, weight_industrial, dir_result):
