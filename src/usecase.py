@@ -73,16 +73,16 @@ def public(
     uc_id = "public"
     print("Use case: " + uc_id)
 
-    load = uc_dict["timeseries"].loc[:, "sum public"]
+    load = uc_dict['timeseries'].loc[:, "sum public"]
     load_sum = load.sum()
     energy_sum = load_sum * timestep / 60
     load_peak = load.max()
     num_public = math.ceil(load_peak / avg_power)
     if num_public > 0:
         # filter hpc points by region
-        in_region_bool = public_points["geometry"].within(region.loc[0])
+        in_region_bool = public_points["geometry"].within(uc_dict["region"].loc[0])
         in_region = public_points.loc[in_region_bool]
-        poi_in_region_bool = public_data["geometry"].within(region.loc[0])
+        poi_in_region_bool = public_data["geometry"].within(uc_dict["region"].loc[0])
         poi_in_region = public_data.loc[poi_in_region_bool]
         num_public_real = in_region["count"].sum()
         # match with clusters anyway (for weights)
@@ -156,7 +156,6 @@ def home_old(
     return zensus
 
 
-# TODO weights dict
 def work(
         landuse, weights_dict,
         uc_dict, timestep=15):
@@ -168,19 +167,26 @@ def work(
     energy_sum = load_sum * timestep / 60
     load_peak = load.max()
 
-    in_region = landuse.within(uc_dict["region"].loc[0])
-
+    in_region_bool = landuse.within(uc_dict["region"].loc[0])
+    in_region = landuse[in_region_bool]
     # calculating the area of polygons
     in_region["area"] = in_region['geometry'].area / 10 ** 6
-    sum_area = in_region["area"].sum()
+    groups = in_region.groupby("landuse")
+    group_labels = ["retail", "commercial", "industrial"]
+    result = gpd.GeoDataFrame(columns=["geometry", "landuse", "potential"])
+    for g in group_labels:
+        group = groups.get_group(g)
+        group = group.assign(potential=group["geometry"].area * weights_dict[g])
+        result = gpd.GeoDataFrame(pd.concat([result, group]), crs="EPSG:3035")
 
+    result['energy'] = result['potential'] * energy_sum / result['potential'].sum()
     # outputs
     print(energy_sum, "kWh got charged in region")
     if uc_dict["visual"]:
-        plots.plot_uc(uc_id, in_region, uc_dict)
+        plots.plot_uc(uc_id, result, uc_dict)
     # TODO check cols
-    cols = ["geometry"]
-    utility.save(in_region, uc_id, cols, uc_dict)
+    cols = ["geometry", "landuse", "potential", "energy"]
+    utility.save(result, uc_id, cols, uc_dict)
 
 
 def work_old(work_data,

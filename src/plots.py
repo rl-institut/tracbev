@@ -15,7 +15,7 @@ def plot_uc(use_case, charge_points, uc_dict):
         charge_points.plot(column='population', ax=ax, marker='o', markersize=5, legend='true',
                            legend_kwds={'label': "Energysum per 100m square"}, cmap='Reds')  # scheme='quantiles'
     elif use_case == "work":
-        charge_points.plot(column='energysum', ax=ax, marker='o', markersize=5, legend='true',
+        charge_points.plot(column='energy', ax=ax, marker='o', markersize=5, legend='true',
                            legend_kwds={'label': "Energysum in area in kWh"})
 
     uc_dict['region'].boundary.plot(ax=ax, color='black', edgecolor='black')

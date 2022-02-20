@@ -95,8 +95,8 @@ def parse_data(args):
         work_commercial = float(parser.get('uc_params', 'work_weight_commercial'))
         work_industrial = float(parser.get('uc_params', 'work_weight_industrial'))
         work = gpd.read_file(os.path.join(data_dir, 'landuse.gpkg'))
-        config_dict.update({'retail': work_retail, 'commercial': work_commercial,
-                            'industrial': work_industrial, 'work': work})
+        work_dict = {'retail': work_retail, 'commercial': work_commercial, 'industrial': work_industrial}
+        config_dict.update({'work': work, 'work_dict': work_dict})
 
     return config_dict
 
@@ -109,19 +109,19 @@ def run_tracbev(data_dict):
     timestamp = timestamp_now.strftime("%y-%m-%d_%H%M%S")
     result_dir = os.path.join('results', 'tracbev_{}'.format(timestamp))
     os.makedirs(result_dir, exist_ok=True)
+    run_dict = data_dict['uc_dict']
 
-    for key in data_dict['region_key']:
+    for key in run_dict['region_key']:
         region = bounds.loc[key, 'geometry']
         region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
-        run_dict = data_dict['uc_dict']
-        run_dict.update({'result_dir': result_dir, 'region': region, 'region_key': key})
+
+        run_dict.update({'result_dir': result_dir, 'region': region, 'key': key})
         # Start Use Cases
         if data_dict['run_hpc']:
             uc.hpc(data_dict['hpc_points'], run_dict)
 
         if data_dict['run_public']:
             uc.public(data_dict['public_positions'], data_dict['poi_data'],
-                      data_dict['poi_weights'],
                       run_dict)
 
         if data_dict['run_home']:
@@ -129,9 +129,9 @@ def run_tracbev(data_dict):
                          run_dict)
 
         if data_dict['run_work']:
-            pw = uc.work(data_dict['work'],
-                         data_dict['retail'],
-                         data_dict['commercial'], data_dict['industrial'], run_dict)
+            uc.work(data_dict['work'],
+                    data_dict['work_dict'],
+                    run_dict)
 
 
 def main():
