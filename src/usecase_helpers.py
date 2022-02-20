@@ -56,12 +56,13 @@ def preprocess_poi(region_poi_unfiltered, boundaries, weights, max_radius, max_w
     result = gpd.GeoDataFrame(["geometry", "weight"], crs="EPSG:3035")
     for i in boundaries.index:
         print("boundary index:", i)
-        region_poi = region_poi_unfiltered.within(boundaries.at[i, 0])
-        region_poi["weight"] = region_poi.apply(poi_value, args=(weights,), axis=1)
-        region_poi = region_poi[["geometry", "weight"]]
-        region_poi.sort_values("weight", inplace=True, ascending=False)
-        region_poi = poi_cluster(region_poi, max_radius, max_weight, increment)
-        result = gpd.GeoDataFrame(pd.concat([result, region_poi]), crs="EPSG:3035")
+        region_poi = region_poi_unfiltered.within(boundaries.at[i, "geometry"])
+        if len(region_poi.index) > 0:
+            region_poi["weight"] = region_poi.apply(poi_value, args=(weights,), axis=1)
+            region_poi = region_poi[["geometry", "weight"]]
+            region_poi.sort_values("weight", inplace=True, ascending=False)
+            region_poi = poi_cluster(region_poi, max_radius, max_weight, increment)
+            result = gpd.GeoDataFrame(pd.concat([result, region_poi]), crs="EPSG:3035")
     # cluster POIs in close proximity
     return result
 
