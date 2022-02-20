@@ -1,4 +1,5 @@
 import geopandas as gpd
+import pandas as pd
 
 
 # used in preprocessing only
@@ -50,13 +51,19 @@ def poi_cluster(poi_data, max_radius, max_weight, increment):
 
 
 # used in preprocessing only
-def preprocess_poi(region_poi, weights, max_radius, max_weight, increment):
+def preprocess_poi(region_poi_unfiltered, boundaries, weights, max_radius, max_weight, increment):
     # give POIs in region a value
-    region_poi["weight"] = region_poi.apply(poi_value, args=(weights,), axis=1)
-    region_poi = region_poi[["geometry", "weight"]]
-    region_poi.sort_values("weight", inplace=True, ascending=False)
+    result = gpd.GeoDataFrame(["geometry", "weight"], crs="EPSG:3035")
+    for i in boundaries.index:
+        print("boundary index:", i)
+        region_poi = region_poi_unfiltered.within(boundaries.at[i, 0])
+        region_poi["weight"] = region_poi.apply(poi_value, args=(weights,), axis=1)
+        region_poi = region_poi[["geometry", "weight"]]
+        region_poi.sort_values("weight", inplace=True, ascending=False)
+        region_poi = poi_cluster(region_poi, max_radius, max_weight, increment)
+        result = gpd.GeoDataFrame(pd.concat([result, region_poi]), crs="EPSG:3035")
     # cluster POIs in close proximity
-    return poi_cluster(region_poi, max_radius, max_weight, increment)
+    return result
 
 
 def match_existing_points(
@@ -64,7 +71,7 @@ def match_existing_points(
 
     region_poi["exists"] = False
     poi_buffer = region_poi.buffer(region_poi["radius"])
-    region_points["weight"] = 0
+    region_points["potential"] = 0
     for i in region_points.index:
         lis_point = region_points.at[i, "geometry"]
         cluster = poi_buffer.contains(lis_point)
@@ -73,18 +80,18 @@ def match_existing_points(
 
         if num_clusters == 0:
             # TODO choose appropriate fallback value
-            region_points.at[i, "weight"] = 0
+            region_points.at[i, "potential"] = 0
         elif num_clusters == 1:
             # region_poi.loc[cluster, "exists"] = True
-            region_points.at[i, "weight"] = clusters["weight"]
-            region_poi.loc[cluster, "exists"] = True
+            region_points.at[i, "potential"] = clusters["potential"]
+            region_poi.loc[cluster, "potential"] = True
 
         elif num_clusters > 1:
             # choose cluster with closest Point
             dist = clusters.distance(lis_point)
             idx = dist.idxmin()
             region_poi.at[idx, "exists"] = True
-            region_points.at[i, "weight"] = clusters.at[idx, "weight"]
+            region_points.at[i, "potential"] = clusters.at[idx, "potential"]
 
     # delete all clusters with exists = True
     region_poi = region_poi.loc[~region_poi["exists"]]
