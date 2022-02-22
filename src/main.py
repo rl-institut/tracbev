@@ -76,7 +76,8 @@ def parse_data(args):
         config_dict["hpc_points"] = positions
 
     if run_public:
-        public_data = gpd.read_file(os.path.join(data_dir, 'osm_poi_elia.gpkg'))
+        public_data_file = parser.gett('data', 'public_poi')
+        public_data = gpd.read_file(os.path.join(data_dir, public_data_file))
         public_pos_file = parser.get('data', 'public_positions')
         public_positions = gpd.read_file(os.path.join(data_dir, public_pos_file))
         poi_weights = pd.read_csv(os.path.join(data_dir, 'poi_weights.csv'), sep=';', encoding='mbcs')

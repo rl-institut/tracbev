@@ -11,8 +11,8 @@ def poi_value(poi_data, weights):
             key = col + ":" + poi_data[col]
             if key in weights:
                 result = max(result, weights[key])
-            else:
-                print(key, "not in weights csv")
+            # else:
+            #     print(key, "not in weights csv")
     return result
 
 
@@ -43,7 +43,7 @@ def poi_cluster(poi_data, max_radius, max_weight, increment):
         areas.append(radius - increment)
         # delete all used points from poi data
         poi_data = poi_data.drop(in_area.index.tolist())
-        print(len(poi_data))
+        print("POI left in area: {}".format(len(poi_data)))
     # create cluster geodataframe
     result_dict = {"geometry": coords, "potential": weights, "radius": areas}
 
@@ -53,12 +53,15 @@ def poi_cluster(poi_data, max_radius, max_weight, increment):
 # used in preprocessing only
 def preprocess_poi(region_poi_unfiltered, boundaries, weights, max_radius, max_weight, increment):
     # give POIs in region a value
-    result = gpd.GeoDataFrame(["geometry", "weight"], crs="EPSG:3035")
+    result = gpd.GeoDataFrame(columns=["geometry", "potential", "radius"], crs="EPSG:3035")
+    region_poi_unfiltered["weight"] = region_poi_unfiltered.apply(poi_value, axis=1, args=(weights,))
+    region_poi_unfiltered = region_poi_unfiltered.loc[region_poi_unfiltered["weight"] > 0]
     for i in boundaries.index:
         print("boundary index:", i)
-        region_poi = region_poi_unfiltered.within(boundaries.at[i, "geometry"])
+        region_poi_bool = region_poi_unfiltered.within(boundaries.at[i, "geometry"])
+        region_poi = region_poi_unfiltered.loc[region_poi_bool]
+        region_poi_unfiltered.drop(region_poi.index, inplace=True)
         if len(region_poi.index) > 0:
-            region_poi["weight"] = region_poi.apply(poi_value, args=(weights,), axis=1)
             region_poi = region_poi[["geometry", "weight"]]
             region_poi.sort_values("weight", inplace=True, ascending=False)
             region_poi = poi_cluster(region_poi, max_radius, max_weight, increment)
