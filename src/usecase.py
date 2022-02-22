@@ -94,14 +94,13 @@ def public(
             add_points = usecase_helpers.distribute_by_poi(region_poi, additional_public)
             region_points = pd.concat(region_points, add_points)
 
-        # TODO: distribution of energy by weight
+        region_points["energy"] = region_points["potential"] / region_points["potential"].sum() * energy_sum
 
         # outputs
         print(energy_sum, "kWh got charged in region")
         if uc_dict["visual"]:
             plots.plot_uc(uc_id, region_points, uc_dict)
-        # TODO check cols
-        cols = ["geometry"]
+        cols = ["geometry", "potential", "energy"]
         utility.save(region_points, uc_id, cols, uc_dict)
 
     else:
