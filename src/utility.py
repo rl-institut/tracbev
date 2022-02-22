@@ -28,12 +28,23 @@ def load_csv(file, delimiter=';', is_num=False, is_dict=False):
     return data
 
 
-# save in .csv format
-def save(data: pd.DataFrame, uc, col_select, region_key, save_dir):
+def weights_to_dict(weights: pd.DataFrame):
+    result = {}
+    for i in weights.index:
+        osm_key = weights.at[i, "OSM-Key"]
+        osm_value = weights.at[i, "OSM-Value"]
+        value = weights.at[i, "weight"]
+        key = osm_key + ':' + osm_value
+        result[key] = value
+    return result
 
+
+# save in .csv format
+def save(data: pd.DataFrame, uc, col_select, uc_dict):
+    region_key = uc_dict["key"]
     filename = 'output_{}_{}.csv'.format(uc, region_key)
-    path = os.path.join(save_dir, filename)
-    data.to_csv(path, sep=';', columns=col_select, decimal='.', index=True)
+    save_path = os.path.join(uc_dict["result_dir"], filename)
+    data.to_csv(save_path, sep=';', columns=col_select, decimal='.', index=True)
     print('saving {} in region {} successful'.format(uc, region_key))
 
 

@@ -88,7 +88,7 @@ def match_existing_points(
         elif num_clusters == 1:
             # region_poi.loc[cluster, "exists"] = True
             region_points.at[i, "potential"] = clusters["potential"]
-            region_poi.loc[cluster, "potential"] = True
+            region_poi.loc[cluster, "exists"] = True
 
         elif num_clusters > 1:
             # choose cluster with closest Point
