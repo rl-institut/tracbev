@@ -8,7 +8,7 @@ import usecase_helpers
 
 
 def hpc(hpc_points: gpd.GeoDataFrame,
-        uc_dict, min_power=150, timestep=15):
+        uc_dict, timestep=15):
     """
     Calculate placements and energy distribution for use case hpc.
 
@@ -16,8 +16,6 @@ def hpc(hpc_points: gpd.GeoDataFrame,
         GeoDataFrame of possible hpc locations
     :param uc_dict:
         Contains basic run info like region boundary and save directory
-    :param min_power:
-        used to calculate needed charging points, default 150
     :param timestep:
         timestep of charging_series, default 15
     """
@@ -29,7 +27,8 @@ def hpc(hpc_points: gpd.GeoDataFrame,
     load_sum = load.sum()
     energy_sum = load_sum * timestep / 60
     load_peak = load.max()
-    num_hpc = math.ceil(load_peak / min_power)
+    charge_info = uc_dict["charge_info"][uc_id]
+    num_hpc = math.ceil(load_peak / charge_info["avg_power"] * charge_info["c_factor"])
 
     if num_hpc > 0:
         # filter hpc points by region
@@ -68,7 +67,7 @@ def hpc(hpc_points: gpd.GeoDataFrame,
 
 def public(
         public_points: gpd.GeoDataFrame, public_data: gpd.GeoDataFrame,
-        uc_dict, timestep=15, avg_power=11):
+        uc_dict, timestep=15):
 
     uc_id = "public"
     print("Use case: " + uc_id)
@@ -77,7 +76,8 @@ def public(
     load_sum = load.sum()
     energy_sum = load_sum * timestep / 60
     load_peak = load.max()
-    num_public = math.ceil(load_peak / avg_power)
+    charge_info = uc_dict["charge_info"][uc_id]
+    num_public = math.ceil(load_peak / charge_info["avg_power"] * charge_info["c_factor"])
     if num_public > 0:
         # filter hpc points by region
         in_region_bool = public_points["geometry"].within(uc_dict["region"].loc[0])
@@ -105,6 +105,21 @@ def public(
 
     else:
         print("No public charging in timeseries")
+
+
+def home(
+        zensus: gpd.GeoDataFrame,
+        uc_dict, timestep=15):
+    uc_id = "home"
+    print("Use case: " + uc_id)
+
+    load = uc_dict['timeseries'].loc[:, "sum home"]
+    load_sum = load.sum()
+    energy_sum = load_sum * timestep / 60
+    load_peak = load.max()
+    charge_info = uc_dict["charge_info"][uc_id]
+    num_home = math.ceil(load_peak / charge_info["avg_power"] * charge_info["c_factor"])
+    return
 
 
 def home_old(

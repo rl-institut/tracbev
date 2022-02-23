@@ -43,6 +43,10 @@ def parse_data(args):
     timeseries = pd.read_csv(os.path.join(data_dir, 'charging_timeseries', timeseries_csv),
                              sep=sep_dict[timeseries_format])
 
+    charge_info_file = parser.get("uc_params", "charging_info")
+    charge_info = pd.read_csv(os.path.join(data_dir, charge_info_file), sep=';', index_col="usecase")
+    charge_info_dict = charge_info.to_dict(orient="index")
+
     # TODO: use pandas?
     region_data = utility.load_csv(os.path.join(data_dir, region_csv))
     region_key = [''] * len(region_data)
@@ -58,7 +62,8 @@ def parse_data(args):
     uc_dict = {
         'timeseries': timeseries,
         'region_key': region_key,
-        'visual': visual
+        'visual': visual,
+        'charge_info': charge_info_dict
     }
 
     config_dict = {
