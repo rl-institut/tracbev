@@ -90,11 +90,17 @@ def parse_data(args):
         config_dict.update({'poi_data': public_data, 'poi_weights': weights_dict, 'public_positions': public_positions})
 
     if run_home:
+        zensus_data_file = parser.get('data', 'zensus_data')
         zensus_data = gpd.read_file(
-            os.path.join(data_dir, 'zensus.gpkg'))
+            os.path.join(data_dir, zensus_data_file))
         zensus_data = zensus_data.to_crs(3035)
-        zensus = zensus_data.iloc[:, 2:5]
-        config_dict['zensus'] = zensus
+        config_dict['zensus'] = zensus_data
+        simbev_meta_file = parser.get('data', 'simbev_metadata')
+        simbev_meta = pd.read_json(os.path.join(data_dir, "charging_timeseries", simbev_meta_file))
+        home_charging_prob = simbev_meta.loc["charging_probabilities", "config"]["private_charging_home"]
+        config_dict['home_prob'] = float(home_charging_prob)
+        num_car = simbev_meta.loc[:, "car_amount"].dropna()
+        config_dict['num_car'] = num_car
 
     if run_work:
         work_retail = float(parser.get('uc_params', 'work_weight_retail'))
@@ -131,8 +137,8 @@ def run_tracbev(data_dict):
                       run_dict)
 
         if data_dict['run_home']:
-            pl = uc.home(data_dict['zensus'],
-                         run_dict)
+            uc.home(data_dict['zensus'],
+                    run_dict, data_dict['home_prob'], data_dict['num_car'])
 
         if data_dict['run_work']:
             uc.work(data_dict['work'],
