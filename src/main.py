@@ -32,6 +32,7 @@ def parse_data(args):
     run_public = parser.getboolean('use_cases', 'public')
     run_home = parser.getboolean('use_cases', 'home')
     run_work = parser.getboolean('use_cases', 'work')
+    visual = parser.getboolean("basic", "plots")
 
     # always used parameters
     boundaries = gpd.read_file(os.path.join(data_dir, 'boundaries.gpkg'))
@@ -42,6 +43,10 @@ def parse_data(args):
     timeseries = pd.read_csv(os.path.join(data_dir, 'charging_timeseries', timeseries_csv),
                              sep=sep_dict[timeseries_format])
 
+    charge_info_file = parser.get("uc_params", "charging_info")
+    charge_info = pd.read_csv(os.path.join(data_dir, charge_info_file), sep=';', index_col="usecase")
+    charge_info_dict = charge_info.to_dict(orient="index")
+
     # TODO: use pandas?
     region_data = utility.load_csv(os.path.join(data_dir, region_csv))
     region_key = [''] * len(region_data)
@@ -50,18 +55,24 @@ def parse_data(args):
         region_key[i] = region_data.loc[i, 'AGS']
         i += 1
 
-    anz_regions = len(region_key)
-    print('Number of Regions set:', anz_regions)
+    num_regions = len(region_key)
+    print('Number of Regions set:', num_regions)
     print('AGS Region_Key is set to:', region_key)
+
+    uc_dict = {
+        'timeseries': timeseries,
+        'region_key': region_key,
+        'visual': visual,
+        'charge_info': charge_info_dict
+    }
 
     config_dict = {
         'boundaries': boundaries,
-        'timeseries': timeseries,
-        'region_key': region_key,
         'run_hpc': run_hpc,
         'run_public': run_public,
         'run_home': run_home,
         'run_work': run_work,
+        'uc_dict': uc_dict
     }
 
     if run_hpc:
@@ -70,62 +81,69 @@ def parse_data(args):
         config_dict["hpc_points"] = positions
 
     if run_public:
-        public = gpd.read_file(os.path.join(data_dir, 'osm_poi_elia.gpkg'))
-
-        poi = pd.read_csv(os.path.join(data_dir, 'poi_weights.csv'), sep=';', encoding='mbcs')
-        config_dict.update({'public': public, 'poi': poi})
+        public_data_file = parser.get('data', 'public_poi')
+        public_data = gpd.read_file(os.path.join(data_dir, public_data_file))
+        public_pos_file = parser.get('data', 'public_positions')
+        public_positions = gpd.read_file(os.path.join(data_dir, public_pos_file))
+        poi_weights = pd.read_csv(os.path.join(data_dir, 'poi_weights.csv'), sep=';', encoding='mbcs')
+        weights_dict = utility.weights_to_dict(poi_weights)
+        config_dict.update({'poi_data': public_data, 'poi_weights': weights_dict, 'public_positions': public_positions})
 
     if run_home:
+        zensus_data_file = parser.get('data', 'zensus_data')
         zensus_data = gpd.read_file(
-            os.path.join(data_dir, 'zensus.gpkg'))
+            os.path.join(data_dir, zensus_data_file))
         zensus_data = zensus_data.to_crs(3035)
-        zensus = zensus_data.iloc[:, 2:5]
-        config_dict['zensus'] = zensus
+        config_dict['zensus'] = zensus_data
+        simbev_meta_file = parser.get('data', 'simbev_metadata')
+        simbev_meta = pd.read_json(os.path.join(data_dir, "charging_timeseries", simbev_meta_file))
+        home_charging_prob = simbev_meta.loc["charging_probabilities", "config"]["private_charging_home"]
+        config_dict['home_prob'] = float(home_charging_prob)
+        num_car = simbev_meta.loc[:, "car_amount"].dropna()
+        config_dict['num_car'] = num_car
 
     if run_work:
         work_retail = float(parser.get('uc_params', 'work_weight_retail'))
         work_commercial = float(parser.get('uc_params', 'work_weight_commercial'))
         work_industrial = float(parser.get('uc_params', 'work_weight_industrial'))
         work = gpd.read_file(os.path.join(data_dir, 'landuse.gpkg'))
-        config_dict.update({'retail': work_retail, 'commercial': work_commercial,
-                            'industrial': work_industrial, 'work': work})
+        work_dict = {'retail': work_retail, 'commercial': work_commercial, 'industrial': work_industrial}
+        config_dict.update({'work': work, 'work_dict': work_dict})
 
     return config_dict
 
 
 def run_tracbev(data_dict):
     bounds = data_dict['boundaries']
-    ts = data_dict['timeseries']
 
     # create result directory
     timestamp_now = datetime.now()
     timestamp = timestamp_now.strftime("%y-%m-%d_%H%M%S")
     result_dir = os.path.join('results', 'tracbev_{}'.format(timestamp))
     os.makedirs(result_dir, exist_ok=True)
+    run_dict = data_dict['uc_dict']
 
-    for key in data_dict['region_key']:
+    for key in run_dict['region_key']:
         region = bounds.loc[key, 'geometry']
         region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
 
+        run_dict.update({'result_dir': result_dir, 'region': region, 'key': key})
         # Start Use Cases
         if data_dict['run_hpc']:
-            uc.hpc(data_dict['hpc_points'], ts, region, key, result_dir)
+            uc.hpc(data_dict['hpc_points'], run_dict)
 
         if data_dict['run_public']:
-            pu = uc.public(data_dict['public'],
-                           ts, data_dict['poi'],
-                           region, key, result_dir)
+            uc.public(data_dict['public_positions'], data_dict['poi_data'],
+                      run_dict)
 
         if data_dict['run_home']:
-            pl = uc.home(data_dict['zensus'],
-                         ts, region,
-                         key, result_dir)
+            uc.home(data_dict['zensus'],
+                    run_dict, data_dict['home_prob'], data_dict['num_car'])
 
         if data_dict['run_work']:
-            pw = uc.work(data_dict['work'],
-                         ts, region,
-                         key, data_dict['retail'],
-                         data_dict['commercial'], data_dict['industrial'], result_dir)
+            uc.work(data_dict['work'],
+                    data_dict['work_dict'],
+                    run_dict)
 
 
 def main():

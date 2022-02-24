@@ -4,25 +4,18 @@ import pandas as pd
 import numpy as np
 import geopandas as gpd
 import math
+import usecase_helpers
 
 
-def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
-        region, region_key, dir_result, min_power=150, timestep=15):
+def hpc(hpc_points: gpd.GeoDataFrame,
+        uc_dict, timestep=15):
     """
     Calculate placements and energy distribution for use case hpc.
 
     :param hpc_points:
         GeoDataFrame of possible hpc locations
-    :param charging_series:
-        DataFrame with required power per use case over time
-    :param region:
-        GeoSeries of region boundaries
-    :param region_key:
-        str of region key
-    :param dir_result:
-        str of result directory
-    :param min_power:
-        used to calculate needed charging points, default 150
+    :param uc_dict:
+        Contains basic run info like region boundary and save directory
     :param timestep:
         timestep of charging_series, default 15
     """
@@ -30,16 +23,17 @@ def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
     print('Use case: ', uc_id)
 
     # get hpc charging series
-    load = charging_series.loc[:, "sum hpc"]
+    load = uc_dict['timeseries'].loc[:, "sum hpc"]
     load_sum = load.sum()
     energy_sum = load_sum * timestep / 60
     load_peak = load.max()
-    num_hpc = math.ceil(load_peak / min_power)
+    charge_info = uc_dict["charge_info"][uc_id]
+    num_hpc = math.ceil(load_peak / charge_info["avg_power"] * charge_info["c_factor"])
 
     if num_hpc > 0:
         # filter hpc points by region
-        in_region_bool = hpc_points["geometry"].within(region.loc[0])
-        in_region = hpc_points.loc[in_region_bool]
+        in_region_bool = hpc_points["geometry"].within(uc_dict["region"].loc[0])
+        in_region = hpc_points.loc[in_region_bool].copy()
         if "has_hpc" in in_region.columns:
             in_region = in_region.loc[in_region["has_hpc"]]
         cols = ["geometry", "hpc_count", "potential", "new_hpc_index", "new_hpc_tag"]
@@ -52,7 +46,7 @@ def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
         if num_hpc_real < num_hpc:
             sim_in_region = in_region.loc[~real_mask]
             sim_in_region = sim_in_region.loc[in_region["new_hpc_index"] > 0]
-            sim_in_region_sorted = sim_in_region.sort_values("potential")
+            sim_in_region_sorted = sim_in_region.sort_values("potential", ascending=False)
             additional_hpc = int(min(num_hpc - num_hpc_real, len(sim_in_region.index)))
             selected_hpc = sim_in_region_sorted.iloc[:additional_hpc]
             real_in_region = real_in_region.append(selected_hpc)
@@ -62,206 +56,111 @@ def hpc(hpc_points: gpd.GeoDataFrame, charging_series: pd.DataFrame,
 
         # outputs
         print(energy_sum, "kWh got fastcharged in region")
-        plots.plot_uc(uc_id, real_in_region, region, dir_result)
+        if uc_dict["visual"]:
+            plots.plot_uc(uc_id, real_in_region, uc_dict)
         cols.remove("new_hpc_tag")
         cols.append("share")
-        utility.save(real_in_region, uc_id, cols, region_key, dir_result)
+        utility.save(real_in_region, uc_id, cols, uc_dict)
     else:
-        print("No hpc in charging timeseries")
+        print("No hpc charging in timeseries")
 
 
 def public(
-        public_data,
-        timeseries, poi,
-        region, region_key, dir_result):
+        public_points: gpd.GeoDataFrame, public_data: gpd.GeoDataFrame,
+        uc_dict, timestep=15):
 
-    print('Use case: public')
-    uc_id = 'public'
+    uc_id = "public"
+    print("Use case: " + uc_id)
 
-    # get poi's in region
-    public_in_region_bool = pd.Series(public_data.geometry.within(region.loc[0]), name='Bool')
-    public_in_region = public_data.join(public_in_region_bool)
-    pir = public_in_region.loc[public_in_region['Bool'] == 1]   # pir = public in region
+    load = uc_dict['timeseries'].loc[:, "sum public"]
+    load_sum = load.sum()
+    energy_sum = load_sum * timestep / 60
+    load_peak = load.max()
+    charge_info = uc_dict["charge_info"][uc_id]
+    num_public = math.ceil(load_peak / charge_info["avg_power"] * charge_info["c_factor"])
+    if num_public > 0:
+        # filter hpc points by region
+        in_region_bool = public_points["geometry"].within(uc_dict["region"].loc[0])
+        in_region = public_points.loc[in_region_bool].copy()
+        poi_in_region_bool = public_data["geometry"].within(uc_dict["region"].loc[0])
+        poi_in_region = public_data.loc[poi_in_region_bool].copy()
+        num_public_real = in_region["count"].sum()
+        # match with clusters anyway (for weights)
+        region_points, region_poi = usecase_helpers.match_existing_points(in_region, poi_in_region)
 
-    anz_pir = len(pir)
-    data = np.zeros(anz_pir, )
-    es = pd.Series(data, name='energysum')
-    pir = pir.join(es)
+        if num_public_real < num_public:
+            additional_public = num_public - num_public_real
+            # distribute additional public points via POI
+            add_points = usecase_helpers.distribute_by_poi(region_poi, additional_public)
+            region_points = pd.concat(region_points, add_points)
 
-    # take all columns from simbev output that are part of the public usecase
-    cols_public = timeseries.columns[-7:-2]
-    load_power = timeseries[cols_public].sum(axis=1)
-    load_power.name = 'chargepower_public'
-    load_power = pd.to_numeric(load_power)
-    energy_sum = load_power * 15 / 60  # Ladeleistung in Energie umwandeln TODO: get timestep from simbev run metadata
+        region_points["energy"] = region_points["potential"] / region_points["potential"].sum() * energy_sum
 
-    energy_sum_overall = energy_sum.sum()
-    print(energy_sum_overall, 'kWh got charged at public space in region', region_key)
+        # outputs
+        print(energy_sum, "kWh got charged in region")
+        if uc_dict["visual"]:
+            plots.plot_uc(uc_id, region_points, uc_dict)
+        cols = ["geometry", "potential", "energy"]
+        utility.save(region_points, uc_id, cols, uc_dict)
 
-    # distribution of energysum based on weight of poi
-    anz_pir = len(pir)
-    pir['newindex'] = np.arange(anz_pir)
-    pir.set_index('newindex', inplace=True)
-    data = np.zeros(anz_pir)
-    pir['weight'] = pd.Series(data)
-
-    a = pir['amenity']
-    le = pir['leisure']
-    s = pir['shop']
-    t = pir['tourism']
-
-    # extract pois by Key
-    poia = poi.loc[poi['OSM-Key'] == 'amenity']
-    poil = poi.loc[poi['OSM-Key'] == 'leisure']
-    pois = poi.loc[poi['OSM-Key'] == 'shop']
-
-    # combining POI-data and geopackage
-    i = 0
-    while i <= anz_pir - 1:
-        if a.iloc[i] is not None and a.iloc[i] in poia['OSM-Value'].values:
-            data = poia.loc[poi['OSM-Value'] == a.iloc[i], "weight"]
-            pir.iloc[i, 8] = data
-        elif le.iloc[i] is not None and le.iloc[i] in poil['OSM-Value'].values:
-            data = poil.loc[poi['OSM-Value'] == le.iloc[i], "weight"]
-            pir.iloc[i, 8] = data
-        elif s.iloc[i] is not None and s.iloc[i] in pois['OSM-Value'].values:
-            data = pois.loc[poi['OSM-Value'] == s.iloc[i], "weight"]
-            pir.iloc[i, 8] = data
-        elif t.iloc[i] is not None and t.iloc[i] in poi['OSM-Value'].values:
-            pir.iloc[i, 8] = 0
-        else:
-            pir.iloc[i, 8] = 0
-            print('Missing OSM Key in Geopackage-Data for UC2')
-        i += 1
-
-    pir['weight'] = pd.to_numeric(pir['weight'], errors='coerce')
-
-    x = np.arange(0, len(pir))
-    pir = pir.assign(INDEX=x)
-    pir.set_index('INDEX', inplace=True)
-
-    pir['energysum'] = utility.apportion(pir['weight'], energy_sum_overall)
-    pir['conversionfactor'] = pir['energysum'] / energy_sum_overall
-
-    plots.plot_public(pir, region)
-
-    col_select = ['name', 'amenity', 'leisure', 'shop', 'tourism',
-                  'geometry', 'energysum', 'weight', 'conversionfactor']
-    utility.save(pir, uc_id, col_select, region_key, dir_result)
+    else:
+        print("No public charging in timeseries")
 
 
 def home(
-        zensus,
-        timeseries, region,
-        region_key, dir_result):
+        zensus: gpd.GeoDataFrame,
+        uc_dict, home_charge_prob, car_num, timestep=15):
+    uc_id = "home"
+    print("Use case: " + uc_id)
 
-    print('Use case: home')
-    uc_id = 'home'
+    load = uc_dict['timeseries'].loc[:, "sum home"]
+    load_sum = load.sum()
+    energy_sum = load_sum * timestep / 60
+    num_home = math.ceil(car_num.sum() * home_charge_prob)
 
-    # getting zenusdata in region
-    home_in_region_bool = pd.Series(zensus.geometry.within(region.loc[0]), name='Bool')
-    home_in_region = zensus.join(home_in_region_bool)
-    hir = home_in_region.loc[home_in_region['Bool'] == 1]   # hir = home in region
-
-    anz_hir = len(hir)
-    data = np.zeros(anz_hir, )
-    es = pd.Series(data, name='energysum')
-    hir = hir.join(es)
-    hir['energysum'] = np.nan
-
-    load_power = timeseries.loc[:, 'sum UC home']
-    load_power.name = 'chargepower_home'
-    load_power = pd.to_numeric(load_power)
-    energy_sum = load_power * 15 / 60  # Ladeleistung in Energie umwandeln
-
-    energy_sum_overall = energy_sum.sum()
-    print(energy_sum_overall, 'kWh got charged at home in region', region_key)
-
-    # distribution of energysum based on population in 100x100 area
-    pop_in_area = sum(hir['population'])
-
-    hir = hir.sort_values(by=['population'], ascending=False)
-
-    hir['conversionfactor'] = home_in_region['population'] / pop_in_area
-
-    x = np.arange(0, len(hir))
-    hir = hir.assign(INDEX=x)
-    hir.set_index('INDEX', inplace=True)
-
-    hir['energysum'] = utility.apportion(hir['conversionfactor'], energy_sum_overall)
-
-    plots.plot_home(hir, region)
-
-    col_select = ['population', 'geom_point', 'geometry', 'energysum', 'conversionfactor']
-    utility.save(hir, uc_id, col_select, region_key, dir_result)
-
-    return zensus
+    if num_home > 0:
+        # filter houses by region
+        in_region_bool = zensus["geometry"].within(uc_dict["region"].loc[0])
+        in_region = zensus.loc[in_region_bool].copy()
+        in_region = in_region.sort_values(by="num", ascending=False)
+        # TODO: allow multiple points per geopoint, increasing the energy
+        in_region = in_region.iloc[:num_home]
+        in_region = in_region.assign(energy=energy_sum/num_home)
+        # outputs
+        print(energy_sum, "kWh got charged in region")
+        if uc_dict["visual"]:
+            plots.plot_uc(uc_id, in_region, uc_dict)
+        cols = ["geometry", "energy"]
+        utility.save(in_region, uc_id, cols, uc_dict)
 
 
-def work(work_data,
-         timeseries, region,
-         region_key, weight_retail,
-         weight_commercial, weight_industrial, dir_result):
+def work(
+        landuse, weights_dict,
+        uc_dict, timestep=15):
+    uc_id = "work"
+    print("Use case: " + uc_id)
 
-    print('Use case: work')
-    uc_id = 'work'
+    load = uc_dict["timeseries"].loc[:, "sum work"]
+    load_sum = load.sum()
+    energy_sum = load_sum * timestep / 60
+    load_peak = load.max()
 
-    # getting pois of area
-    work_in_region_bool = pd.Series(work_data.geometry.within(region.loc[0]), name='Bool')
-    work_in_region = work_data.join(work_in_region_bool)
-    wir = work_in_region.loc[work_in_region['Bool'] == 1]  # wir = work in region
-
-    anz_wir = len(wir)
-    data = np.zeros(anz_wir, )
-    es = pd.Series(data, name='energysum')
-    wir = wir.join(es)
-    wir['energysum'] = np.nan
-
-    load_power = timeseries.loc[:, 'sum UC work']
-    load_power.name = 'chargepower_work'
-    load_power = pd.to_numeric(load_power)
-    energy_sum = load_power * 15 / 60  # convert power to energy
-
-    energy_sum_overall = energy_sum.sum()
-    print(energy_sum_overall, 'kWh got charged at work in region', region_key)
-
-    # distribution of energysum based on area of Polygon
-    anz_wir = len(wir)
-    wir['newindex'] = np.arange(anz_wir)
-    wir.set_index('newindex', inplace=True)
-    data = np.zeros(anz_wir)
-    wir['weight'] = pd.Series(data)
-
+    in_region_bool = landuse.within(uc_dict["region"].loc[0])
+    in_region = landuse[in_region_bool].copy()
     # calculating the area of polygons
-    area = wir['geometry'].area / 10 ** 6
-    sum_area = sum(area)
+    in_region["area"] = in_region['geometry'].area / 10 ** 6
+    groups = in_region.groupby("landuse")
+    group_labels = ["retail", "commercial", "industrial"]
+    result = gpd.GeoDataFrame(columns=["geometry", "landuse", "potential"])
+    for g in group_labels:
+        group = groups.get_group(g)
+        group = group.assign(potential=group["geometry"].area * weights_dict[g])
+        result = gpd.GeoDataFrame(pd.concat([result, group]), crs="EPSG:3035")
 
-    # calculation of weight for type of use
-    i = 0
-    while i <= anz_wir - 1:
-        if 'retail' in wir.iloc[i, 0]:
-            wir.iloc[i, 4] = weight_retail * area[i] / sum_area  # Weight for retail
-
-        elif 'commercial' in wir.iloc[i, 0]:
-            wir.iloc[i, 4] = weight_commercial * area[i] / sum_area  # Weight for commercial
-
-        elif 'industrial' in wir.iloc[i, 0]:
-            wir.iloc[i, 4] = weight_industrial * area[i] / sum_area  # Weight for industrial
-        else:
-            print('no specification')
-
-        i += 1
-
-    x = np.arange(0, len(wir))
-    wir = wir.assign(INDEX=x)
-    wir.set_index('INDEX', inplace=True)
-
-    wir['energysum'] = utility.apportion(wir['weight'], energy_sum_overall)
-    wir['conversionfactor'] = wir['energysum']/energy_sum_overall
-
-    wir['center_geo'] = wir.centroid
-
-    plots.plot_work(wir, region)
-
-    col_select = ['landuse', 'geometry', 'center_geo', 'energysum', 'weight', 'conversionfactor']
-    utility.save(wir, uc_id, col_select, region_key, dir_result)
+    result['energy'] = result['potential'] * energy_sum / result['potential'].sum()
+    # outputs
+    print(energy_sum, "kWh got charged in region")
+    if uc_dict["visual"]:
+        plots.plot_uc(uc_id, result, uc_dict)
+    cols = ["geometry", "landuse", "potential", "energy"]
+    utility.save(result, uc_id, cols, uc_dict)
