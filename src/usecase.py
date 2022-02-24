@@ -1,7 +1,6 @@
 import plots
 import utility
 import pandas as pd
-import numpy as np
 import geopandas as gpd
 import math
 import usecase_helpers
@@ -12,12 +11,12 @@ def hpc(hpc_points: gpd.GeoDataFrame,
     """
     Calculate placements and energy distribution for use case hpc.
 
-    :param hpc_points:
+    :param hpc_points: gpd.GeoDataFrame
         GeoDataFrame of possible hpc locations
-    :param uc_dict:
-        Contains basic run info like region boundary and save directory
-    :param timestep:
-        timestep of charging_series, default 15
+    :param uc_dict: dict
+        contains basic run info like region boundary and save directory
+    :param timestep: int
+        time step of the simbev input series, default: 15 (minutes)
     """
     uc_id = 'hpc'
     print('Use case: ', uc_id)
@@ -68,6 +67,18 @@ def hpc(hpc_points: gpd.GeoDataFrame,
 def public(
         public_points: gpd.GeoDataFrame, public_data: gpd.GeoDataFrame,
         uc_dict, timestep=15):
+    """
+    Calculate placements and energy distribution for use case hpc.
+
+    :param public_points: gpd.GeoDataFrame
+        existing public charging points
+    :param public_data: gpd.GeoDataFrame
+        clustered POI
+    :param uc_dict: dict
+        contains basic run info like region boundary and save directory
+    :param timestep: int
+        time step of the simbev input series, default: 15 (minutes)
+    """
 
     uc_id = "public"
     print("Use case: " + uc_id)
@@ -108,8 +119,22 @@ def public(
 
 
 def home(
-        zensus: gpd.GeoDataFrame,
+        home_data: gpd.GeoDataFrame,
         uc_dict, home_charge_prob, car_num, timestep=15):
+    """
+    Calculate placements and energy distribution for use case hpc.
+
+    :param home_data: gpd.GeoDataFrame
+        info about house types
+    :param uc_dict: dict
+        contains basic run info like region boundary and save directory
+    :param home_charge_prob: float
+        probability of privately available home charging
+    :param car_num: pd.Series
+        total cars per car type in scenario
+    :param timestep: int
+        time step of the simbev input series, default: 15 (minutes)
+    """
     uc_id = "home"
     print("Use case: " + uc_id)
 
@@ -120,8 +145,8 @@ def home(
 
     if num_home > 0:
         # filter houses by region
-        in_region_bool = zensus["geometry"].within(uc_dict["region"].loc[0])
-        in_region = zensus.loc[in_region_bool].copy()
+        in_region_bool = home_data["geometry"].within(uc_dict["region"].loc[0])
+        in_region = home_data.loc[in_region_bool].copy()
         in_region = in_region.sort_values(by="num", ascending=False)
         # TODO: allow multiple points per geopoint, increasing the energy
         in_region = in_region.iloc[:num_home]
@@ -137,13 +162,24 @@ def home(
 def work(
         landuse, weights_dict,
         uc_dict, timestep=15):
+    """
+    Calculate placements and energy distribution for use case hpc.
+
+    :param landuse: gpd.GeoDataFrame
+        work areas by land use
+    :param weights_dict: dict
+        weights for different land use types
+    :param uc_dict: dict
+        contains basic run info like region boundary and save directory
+    :param timestep: int
+        time step of the simbev input series, default: 15 (minutes)
+    """
     uc_id = "work"
     print("Use case: " + uc_id)
 
     load = uc_dict["timeseries"].loc[:, "sum work"]
     load_sum = load.sum()
     energy_sum = load_sum * timestep / 60
-    load_peak = load.max()
 
     in_region_bool = landuse.within(uc_dict["region"].loc[0])
     in_region = landuse[in_region_bool].copy()
