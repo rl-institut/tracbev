@@ -12,11 +12,11 @@ def plot_uc(use_case, charge_points, uc_dict):
     elif use_case == "public":
         charge_points.plot(ax=ax, marker='o', markersize=5, legend='false')
     elif use_case == "home":
-        charge_points.plot(column='population', ax=ax, marker='o', markersize=5, legend='true',
-                           legend_kwds={'label': "Energysum per 100m square"}, cmap='Reds')  # scheme='quantiles'
+        charge_points.plot(column='energy', ax=ax, marker='o', markersize=5, legend='true',
+                           legend_kwds={'label': "Energysum per 100m square"}, cmap='cool')  # scheme='quantiles'
     elif use_case == "work":
         charge_points.plot(column='energy', ax=ax, marker='o', markersize=5, legend='true',
-                           legend_kwds={'label': "Energysum in area in kWh"})
+                           legend_kwds={'label': "Energysum in area in kWh"}, cmap='YlGnBu', vmin=0)
 
     uc_dict['region'].boundary.plot(ax=ax, color='black', edgecolor='black')
     plt.savefig(pathlib.Path(uc_dict["result_dir"], use_case + "_plot.svg"), bbox_inches='tight')
