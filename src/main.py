@@ -47,13 +47,8 @@ def parse_data(args):
     charge_info = pd.read_csv(os.path.join(data_dir, charge_info_file), sep=';', index_col="usecase")
     charge_info_dict = charge_info.to_dict(orient="index")
 
-    # TODO: use pandas?
-    region_data = utility.load_csv(os.path.join(data_dir, region_csv))
-    region_key = [''] * len(region_data)
-    i = 0
-    while i < len(region_data):  # TODO: rethink region data and csv
-        region_key[i] = region_data.loc[i, 'AGS']
-        i += 1
+    region_data = pd.read_csv(os.path.join(data_dir, region_csv), sep=';')
+    region_key = region_data["AGS"].astype(str).tolist()
 
     num_regions = len(region_key)
     print('Number of Regions set:', num_regions)
