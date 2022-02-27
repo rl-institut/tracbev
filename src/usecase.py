@@ -149,13 +149,19 @@ def home(
         in_region = home_data.loc[in_region_bool].copy()
         in_region = in_region.sort_values(by="num", ascending=False)
         # TODO: allow multiple points per geopoint, increasing the energy
-        in_region = in_region.iloc[:num_home]
-        in_region = in_region.assign(energy=energy_sum/num_home)
+        # TODO rewrite apportion to fit home usecase (randomly distribute num_home depending on column num)
+        potential = usecase_helpers.apportion_home(in_region, num_home)
+        in_region["charge_spots"] = potential
+        in_region = in_region.loc[in_region["charge_spots"] > 0]
+        in_region["energy"] = energy_sum * in_region["charge_spots"] / num_home
+        in_region = in_region.sort_values(by="energy", ascending=False)
+        # in_region = in_region.iloc[:num_home]
+        # in_region = in_region.assign(energy=energy_sum/num_home)
         # outputs
         print(energy_sum, "kWh got charged in region")
         if uc_dict["visual"]:
             plots.plot_uc(uc_id, in_region, uc_dict)
-        cols = ["geometry", "energy"]
+        cols = ["geometry", "charge_spots", "energy"]
         utility.save(in_region, uc_id, cols, uc_dict)
 
 

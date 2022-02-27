@@ -21,6 +21,7 @@ def poi_cluster(poi_data, max_radius, max_weight, increment):
     coords = []
     weights = []
     areas = []
+    print("POI in area: {}".format(len(poi_data)))
     while len(poi_data):
         radius = increment
         weight = 0
@@ -43,7 +44,7 @@ def poi_cluster(poi_data, max_radius, max_weight, increment):
         areas.append(radius - increment)
         # delete all used points from poi data
         poi_data = poi_data.drop(in_area.index.tolist())
-        print("POI left in area: {}".format(len(poi_data)))
+
     # create cluster geodataframe
     result_dict = {"geometry": coords, "potential": weights, "radius": areas}
 
@@ -112,3 +113,11 @@ def distribute_by_poi(
     selected_hpc = region_poi.iloc[:num_points]
     # choose point in cluster thats closest to big street
     return selected_hpc
+
+
+def apportion_home(home_series: pd.DataFrame, num_spots: int):
+    samples = home_series.sample(num_spots, weights="num", random_state=1, replace=True)
+    result = pd.Series([0] * len(home_series.index), index=home_series.index)
+    for i in samples.index:
+        result.at[i] += 1
+    return result
