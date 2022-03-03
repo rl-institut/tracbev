@@ -35,7 +35,7 @@ def parse_data(args):
     visual = parser.getboolean("basic", "plots")
 
     # always used parameters
-    boundaries = gpd.read_file(os.path.join(data_dir, 'boundaries.gpkg'))
+    boundaries = gpd.read_file(os.path.join(data_dir, parser.get('data', 'boundaries')))
     boundaries.set_index('ags_0', inplace=True)  # AGS als Index des Dataframes setzen
     boundaries = boundaries.dissolve(by='ags_0')  # Zusammenfassen der Regionenn mit geleichem AGS
     boundaries = boundaries.to_crs(3035)
@@ -48,7 +48,7 @@ def parse_data(args):
     charge_info_dict = charge_info.to_dict(orient="index")
 
     region_data = pd.read_csv(os.path.join(data_dir, region_csv), sep=';')
-    region_key = region_data["AGS"].astype(str).tolist()
+    region_key = region_data["AGS"].tolist()
 
     num_regions = len(region_key)
     print('Number of Regions set:', num_regions)

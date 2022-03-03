@@ -8,9 +8,11 @@ def plot_uc(use_case, charge_points, uc_dict):
     ax.set_aspect('equal')
     # charge point plotting differs per use case
     if use_case == "hpc":
-        charge_points.plot(ax=ax, marker='o', color='red', markersize=5)
+        charge_points.plot(ax=ax, marker='o', cmap='Set2', markersize=5,
+                           column="exists", categorical=True)
     elif use_case == "public":
-        charge_points.plot(ax=ax, marker='o', markersize=5, legend='false')
+        charge_points.plot(ax=ax, marker='o', markersize=5, legend='false',
+                           column="exists", cmap="Set1", categorical=True)
     elif use_case == "home":
         charge_points.plot(column='energy', ax=ax, marker='o', markersize=5, legend='true',
                            legend_kwds={'label': "Energysum per 100m square"}, cmap='cool')  # scheme='quantiles'

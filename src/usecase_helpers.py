@@ -75,7 +75,7 @@ def match_existing_points(
         region_points: gpd.GeoDataFrame, region_poi: gpd.GeoDataFrame):
 
     region_poi["exists"] = False
-    poi_buffer = region_poi.buffer(region_poi["radius"])
+    poi_buffer = region_poi.buffer(region_poi["radius"].astype(int))
     region_points["potential"] = 0
     for i in region_points.index:
         lis_point = region_points.at[i, "geometry"]
@@ -84,8 +84,8 @@ def match_existing_points(
         num_clusters = len(clusters.index)
 
         if num_clusters == 0:
-            # TODO choose appropriate fallback value
-            region_points.at[i, "potential"] = 0
+            # decent average as fallback
+            region_points.at[i, "potential"] = 5
         elif num_clusters == 1:
             # region_poi.loc[cluster, "exists"] = True
             region_points.at[i, "potential"] = clusters["potential"]
@@ -108,16 +108,22 @@ def distribute_by_poi(
         region_poi: gpd.GeoDataFrame,
         num_points):
     # sort clusters without existing points by weight, then choose highest
-    region_poi.sort_values("weight", inplace=True, ascending=False)
+    region_poi.sort_values("potential", inplace=True, ascending=False)
     num_points = int(min(num_points, len(region_poi.index)))
     selected_hpc = region_poi.iloc[:num_points]
     # choose point in cluster thats closest to big street
     return selected_hpc
 
 
-def apportion_home(home_series: pd.DataFrame, num_spots: int):
-    samples = home_series.sample(num_spots, weights="num", random_state=1, replace=True)
-    result = pd.Series([0] * len(home_series.index), index=home_series.index)
+# TODO: prevent more spots than homes per square
+def apportion_home(home_df: pd.DataFrame, num_spots: int):
+    # if too many spots need to be placed, every house gets a spot
+    if num_spots >= home_df["num"].sum():
+        print("All private home spots have been filled. Leftover:", num_spots - home_df["num"].sum())
+        return home_df.loc[:, "num"]
+    # distribute charge points based on houses per square
+    samples = home_df.sample(num_spots, weights="num", random_state=1, replace=True)
+    result = pd.Series([0] * len(home_df.index), index=home_df.index)
     for i in samples.index:
         result.at[i] += 1
     return result

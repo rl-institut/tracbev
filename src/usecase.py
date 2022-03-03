@@ -37,7 +37,7 @@ def hpc(hpc_points: gpd.GeoDataFrame,
             in_region = in_region.loc[in_region["has_hpc"]]
         cols = ["geometry", "hpc_count", "potential", "new_hpc_index", "new_hpc_tag"]
         in_region = in_region[cols]
-        # select all hpc points tagged 0, all registered points
+        # select all hpc points tagged 0 (all registered points)
         real_mask = in_region["new_hpc_tag"] == 0
         real_in_region = in_region.loc[real_mask]
         num_hpc_real = real_in_region["hpc_count"].sum()
@@ -50,14 +50,17 @@ def hpc(hpc_points: gpd.GeoDataFrame,
             selected_hpc = sim_in_region_sorted.iloc[:additional_hpc]
             real_in_region = real_in_region.append(selected_hpc)
 
+        real_in_region["potential"] = real_in_region["potential"] * real_in_region["hpc_count"]
         total_potential = real_in_region["potential"].sum()
         real_in_region = real_in_region.assign(share=real_in_region["potential"] / total_potential).round(6)
+        real_in_region["exists"] = real_in_region["new_hpc_tag"] == 0
 
         # outputs
-        print(energy_sum, "kWh got fastcharged in region")
+        print(energy_sum.round(1), "kWh got fastcharged in region")
         if uc_dict["visual"]:
             plots.plot_uc(uc_id, real_in_region, uc_dict)
         cols.remove("new_hpc_tag")
+        cols.append("exists")
         cols.append("share")
         utility.save(real_in_region, uc_id, cols, uc_dict)
     else:
@@ -98,17 +101,18 @@ def public(
         num_public_real = in_region["count"].sum()
         # match with clusters anyway (for weights)
         region_points, region_poi = usecase_helpers.match_existing_points(in_region, poi_in_region)
+        region_points["exists"] = True
 
         if num_public_real < num_public:
             additional_public = num_public - num_public_real
             # distribute additional public points via POI
             add_points = usecase_helpers.distribute_by_poi(region_poi, additional_public)
-            region_points = pd.concat(region_points, add_points)
+            region_points = pd.concat([region_points, add_points])
 
         region_points["energy"] = region_points["potential"] / region_points["potential"].sum() * energy_sum
 
         # outputs
-        print(energy_sum, "kWh got charged in region")
+        print(energy_sum.round(1), "kWh got charged in region")
         if uc_dict["visual"]:
             plots.plot_uc(uc_id, region_points, uc_dict)
         cols = ["geometry", "potential", "energy"]
@@ -158,7 +162,7 @@ def home(
         # in_region = in_region.iloc[:num_home]
         # in_region = in_region.assign(energy=energy_sum/num_home)
         # outputs
-        print(energy_sum, "kWh got charged in region")
+        print(energy_sum.round(1), "kWh got charged in region")
         if uc_dict["visual"]:
             plots.plot_uc(uc_id, in_region, uc_dict)
         cols = ["geometry", "charge_spots", "energy"]
@@ -195,13 +199,14 @@ def work(
     group_labels = ["retail", "commercial", "industrial"]
     result = gpd.GeoDataFrame(columns=["geometry", "landuse", "potential"])
     for g in group_labels:
-        group = groups.get_group(g)
-        group = group.assign(potential=group["geometry"].area * weights_dict[g])
-        result = gpd.GeoDataFrame(pd.concat([result, group]), crs="EPSG:3035")
+        if g in groups.groups:
+            group = groups.get_group(g)
+            group = group.assign(potential=group["geometry"].area * weights_dict[g])
+            result = gpd.GeoDataFrame(pd.concat([result, group]), crs="EPSG:3035")
 
     result['energy'] = result['potential'] * energy_sum / result['potential'].sum()
     # outputs
-    print(energy_sum, "kWh got charged in region")
+    print(energy_sum.round(1), "kWh got charged in region")
     if uc_dict["visual"]:
         plots.plot_uc(uc_id, result, uc_dict)
     cols = ["geometry", "landuse", "potential", "energy"]
