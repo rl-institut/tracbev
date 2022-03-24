@@ -2,13 +2,11 @@ import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import configparser as cp
-import os
 import argparse
 from datetime import datetime
 import pathlib
 
 import usecase as uc
-import utility
 
 
 def parse_data(args):
@@ -75,9 +73,7 @@ def parse_data(args):
         public_data = gpd.read_file(pathlib.Path(data_dir, public_data_file))
         public_pos_file = parser.get('data', 'public_positions')
         public_positions = gpd.read_file(pathlib.Path(data_dir, public_pos_file))
-        poi_weights = pd.read_csv(pathlib.Path(data_dir, 'poi_weights.csv'), sep=';', encoding='mbcs')
-        weights_dict = utility.weights_to_dict(poi_weights)
-        config_dict.update({'poi_data': public_data, 'poi_weights': weights_dict, 'public_positions': public_positions})
+        config_dict.update({'poi_data': public_data, 'public_positions': public_positions})
 
     if run_home:
         zensus_data_file = parser.get('data', 'zensus_data')
