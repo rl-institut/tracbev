@@ -21,7 +21,8 @@ def plot_uc(use_case, charge_points, uc_dict):
                            legend_kwds={'label': "Energysum in area in kWh"}, cmap='YlGnBu', vmin=0)
 
     uc_dict['region'].boundary.plot(ax=ax, color='black', edgecolor='black')
-    plt.savefig(pathlib.Path(uc_dict["result_dir"], use_case + "_plot.svg"), bbox_inches='tight')
+    plt.savefig(pathlib.Path(uc_dict["result_dir"], "plot_" + use_case + "_" + uc_dict["key"] + ".svg"),
+                bbox_inches='tight')
 
 
 def plot_energy_sum(energysum):
