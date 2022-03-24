@@ -115,7 +115,6 @@ def distribute_by_poi(
     return selected_hpc
 
 
-# TODO: prevent more spots than homes per square
 def apportion_home(home_df: pd.DataFrame, num_spots: int):
     # if too many spots need to be placed, every house gets a spot
     if num_spots >= home_df["num"].sum():
