@@ -108,7 +108,7 @@ def run_tracbev(data_dict):
     run_dict = data_dict['uc_dict']
 
     for key, timeseries in run_dict['timeseries'].items():
-        region = bounds.loc[int(key), 'geometry']
+        region = bounds.loc[key, 'geometry']
         region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
 
         run_dict.update({'result_dir': result_dir, 'region': region, 'key': key})
