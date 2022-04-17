@@ -149,7 +149,6 @@ def home(
     load_sum = load.sum()
     energy_sum = load_sum * timestep / 60
     car_sum = sum(car_num.at[uc_dict['key']].values())
-    print(car_sum)
     num_home = math.ceil(car_sum * home_charge_prob)
 
     if num_home > 0:
