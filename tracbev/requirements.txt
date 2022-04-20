@@ -1,5 +1,0 @@
-configparser
-numpy
-pandas
-geopandas
-matplotlib.pyplot
