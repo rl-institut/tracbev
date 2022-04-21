@@ -10,6 +10,10 @@ Welcome to TracBEV's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   getting_started
+   workflow
+   data
+   changelog
 
 
 Indices and tables
