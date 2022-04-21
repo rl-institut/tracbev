@@ -41,7 +41,7 @@ setup(
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
     # https://packaging.python.org/specifications/core-metadata/#summary
-    description="Description",  # Optional
+    description="Tool for the regional allocation of charging infrastructure in Germany",  # Optional
     # This is an optional longer description of your project that represents
     # the body of text which users will see when they visit PyPI.
     #
@@ -69,7 +69,7 @@ setup(
     url="https://github.com/rl-institut/tracbev",  # Optional
     # This should be your name or the name of the organization which owns the
     # project.
-    author="Reiner Lemoine Institut",  # Optional
+    author="Schiel, Moritz",  # Optional
     # This should be a valid email address corresponding to the author listed
     # above.
     # author_email='pypa-dev@googlegroups.com',  # Optional
@@ -92,9 +92,6 @@ setup(
         # These classifiers are *not* checked by 'pip install'. See instead
         # 'python_requires' below.
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
     ],
     # This field adds keywords for your project which will appear on the
@@ -120,7 +117,7 @@ setup(
     # and refuse to install the project if the version does not match. If you
     # do not support Python 2, you can simplify this to '>=3.5' or similar, see
     # https://packaging.python.org/guides/distributing-packages-using-setuptools/#python-requires
-    python_requires=">=3, <4",
+    python_requires="=3.8",
     # This field lists other packages that your project depends on to run.
     # Any package you put here will be installed by pip when your project is
     # installed, so they must be valid existing projects.
@@ -173,7 +170,7 @@ setup(
     # maintainers, and where to support the project financially. The key is
     # what's used to render the link text on PyPI.
     project_urls={  # Optional
-        "Bug Reports": "https://github.com/rl-institut/rli_template/issues",
-        "Source": "https://github.com/rl-institut/rli_template",
+        "Bug Reports": "https://github.com/rl-institut/tracbev/issues",
+        "Source": "https://github.com/rl-institut/tracbev",
     },
 )
