@@ -12,7 +12,6 @@ Welcome to TracBEV's documentation!
 
    getting_started
    workflow
-   data
    changelog
 
 
