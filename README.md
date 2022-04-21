@@ -12,8 +12,7 @@ TracBEV is a **t**ool for the **r**egional **a**llocation of **c**harging infras
 
 ## Get Data
 
-The required data to run this tool will soon be available here.
-For now it can be requested from us directly.
+The required data to run this tool can be downloaded here: https://zenodo.org/record/6466480#.YmE9xtPP1hE
 
 ## Running TracBEV
 
