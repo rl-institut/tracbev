@@ -11,7 +11,6 @@ Welcome to TracBEV's documentation!
    :caption: Contents:
 
    getting_started
-   workflow
    changelog
 
 
