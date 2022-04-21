@@ -36,5 +36,5 @@ jobs:
         pytest
     - name: Build documentation
       run: |
-        pip install -r doc/requirements.txt
-        make -C doc html
+        pip install -r docs/docs_requirements.txt
+        make -C docs html
