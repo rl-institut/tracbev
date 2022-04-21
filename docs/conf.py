@@ -17,12 +17,12 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'rli_template'
-copyright = '2020, Reiner Lemoine Institut'
+project = 'TracBEV'
+copyright = '2022, Reiner Lemoine Institut'
 author = 'Reiner Lemoine Institut'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = '0.1.0'
 
 
 # -- General configuration ---------------------------------------------------
