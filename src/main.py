@@ -104,7 +104,7 @@ def run_tracbev(data_dict):
     timestamp_now = datetime.now()
     timestamp = timestamp_now.strftime("%y-%m-%d_%H%M%S")
     result_dir = pathlib.Path('results', '{}_{}'.format(data_dict['scenario_name'], timestamp))
-    result_dir.mkdir(exist_ok=True)
+    result_dir.mkdir(exist_ok=True, parents=True)
     run_dict = data_dict['uc_dict']
 
     for key, timeseries in run_dict['timeseries'].items():
