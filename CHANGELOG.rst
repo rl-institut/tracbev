@@ -2,6 +2,21 @@
 Changelog
 =========
 
+v0.1.0b - 2022-04-22
+==========
+
+Added
+-----
+* Support for single region SimBEV scenarios
+  `#15 <https://github.com/rl-institut/tracbev/issues/15>`_
+* Added necessary file to run SimBEV that wasn't included in the download
+
+Changed
+-----
+
+* Hotfixed issue with creating result directory
+
+
 v0.1.0 - 2022-04-21
 ==========
 
