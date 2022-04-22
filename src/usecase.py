@@ -148,7 +148,10 @@ def home(
     load = ts_dict[uc_dict['key']].loc[:, "sum home"]
     load_sum = load.sum()
     energy_sum = load_sum * timestep / 60
-    car_sum = sum(car_num.at[uc_dict['key']].values())
+    if len(car_num.index) == 1:
+        car_sum = sum(car_num.at["single_region"].values())
+    else:
+        car_sum = sum(car_num.at[uc_dict['key']].values())
     num_home = math.ceil(car_sum * home_charge_prob)
 
     if num_home > 0:
