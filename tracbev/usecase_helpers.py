@@ -117,11 +117,11 @@ def distribute_by_poi(
 
 def apportion_home(home_df: pd.DataFrame, num_spots: int):
     # if too many spots need to be placed, every house gets a spot
-    if num_spots >= home_df["num"].sum():
-        print("All private home spots have been filled. Leftover:", num_spots - home_df["num"].sum())
-        return home_df.loc[:, "num"]
+    if num_spots >= home_df["num_total"].sum():
+        print("All private home spots have been filled. Leftover:", num_spots - home_df["num_total"].sum())
+        return home_df.loc[:, "num_total"]
     # distribute charge points based on houses per square
-    samples = home_df.sample(num_spots, weights="num", random_state=1, replace=True)
+    samples = home_df.sample(num_spots, weights="num_total", random_state=1, replace=True)
     result = pd.Series([0] * len(home_df.index), index=home_df.index)
     for i in samples.index:
         result.at[i] += 1
