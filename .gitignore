@@ -2,3 +2,4 @@ data/
 results/
 .idea/misc.xml
 __pycache__
+scenarios/
