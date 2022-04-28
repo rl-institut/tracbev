@@ -158,6 +158,7 @@ def home(
         # filter houses by region
         in_region_bool = home_data["geometry"].within(uc_dict["region"].loc[0])
         in_region = home_data.loc[in_region_bool].copy()
+        in_region["num_total"] = in_region["num"] + in_region["num_mfh"]
         in_region = in_region.sort_values(by="num", ascending=False)
         potential = usecase_helpers.apportion_home(in_region, num_home)
         in_region["charge_spots"] = potential

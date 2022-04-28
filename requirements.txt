@@ -1,5 +1,7 @@
 pandas
-geopandas
+geopandas>=0.8,<0.10
+shapely~=1.7.0
 matplotlib
 configparser
 numpy
+descartes
