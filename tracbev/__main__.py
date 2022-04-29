@@ -1,6 +1,6 @@
 import pandas as pd
 import geopandas as gpd
-import matplotlib.pyplot as plt
+import numpy as np
 import configparser as cp
 import argparse
 from datetime import datetime
@@ -27,12 +27,11 @@ def parse_data(args):
     run_public = parser.getboolean('use_cases', 'public')
     run_home = parser.getboolean('use_cases', 'home')
     run_work = parser.getboolean('use_cases', 'work')
-    visual = parser.getboolean("basic", "plots")
 
     # always used parameters
     boundaries = gpd.read_file(pathlib.Path(data_dir, parser.get('data', 'boundaries')))
-    boundaries.set_index('ags_0', inplace=True)  # AGS als Index des Dataframes setzen
-    boundaries = boundaries.dissolve(by='ags_0')  # Zusammenfassen der Regionenn mit geleichem AGS
+    boundaries.set_index('ags_0', inplace=True)  # region key as dataframe index
+    boundaries = boundaries.dissolve(by='ags_0')  # merge regions with identical key
 
     ts_path = pathlib.Path(scenario_path, "charging_timeseries")
     ts_dict = {}
@@ -47,11 +46,9 @@ def parse_data(args):
     print('Number of Regions set:', num_regions)
     print('AGS Region_Key is set to:', ts_dict.keys())
 
-    uc_dict = {
-        'timeseries': ts_dict,
-        'visual': visual,
-        'charge_info': charge_info_dict
-    }
+    # set random seed from config or truly random if none is given
+    rng_seed = parser['basic'].getint('random_seed', None)
+    rng = np.random.default_rng(rng_seed)
 
     config_dict = {
         'boundaries': boundaries,
@@ -59,8 +56,11 @@ def parse_data(args):
         'run_public': run_public,
         'run_home': run_home,
         'run_work': run_work,
-        'uc_dict': uc_dict,
-        'scenario_name': args.scenario
+        'timeseries': ts_dict,
+        'visual': parser.getboolean("basic", "plots"),
+        'charge_info': charge_info_dict,
+        'scenario_name': args.scenario,
+        'random_seed': rng
     }
 
     if run_hpc:
@@ -79,12 +79,21 @@ def parse_data(args):
         zensus_data_file = parser.get('data', 'zensus_data')
         zensus_data = gpd.read_file(pathlib.Path(data_dir, zensus_data_file))
         zensus_data = zensus_data.to_crs(3035)
-        config_dict['zensus'] = zensus_data
+
         simbev_meta = pd.read_json(pathlib.Path(ts_path, "metadata_simbev_run.json"))
         home_charging_prob = simbev_meta.loc["charging_probabilities", "config"]["private_charging_home"]
-        config_dict['home_prob'] = float(home_charging_prob)
+
         num_car = simbev_meta.loc[:, "car_amounts"].dropna()
-        config_dict['num_car'] = num_car
+
+        config_dict.update({
+            "sfh_available": parser.getfloat("uc_params", "single_family_home_share"),
+            "sfh_avg_spots": parser.getfloat("uc_params", "single_family_home_spots"),
+            "mfh_available": parser.getfloat("uc_params", "multi_family_home_share"),
+            "mfh_avg_spots": parser.getfloat("uc_params", "multi_family_home_spots"),
+            "zensus": zensus_data,
+            "home_prob": float(home_charging_prob),
+            "num_car": num_car
+        })
 
     if run_work:
         work_retail = float(parser.get('uc_params', 'work_weight_retail'))
@@ -105,29 +114,28 @@ def run_tracbev(data_dict):
     timestamp = timestamp_now.strftime("%y-%m-%d_%H%M%S")
     result_dir = pathlib.Path('results', '{}_{}'.format(data_dict['scenario_name'], timestamp))
     result_dir.mkdir(exist_ok=True, parents=True)
-    run_dict = data_dict['uc_dict']
 
-    for key, timeseries in run_dict['timeseries'].items():
+    for key, timeseries in data_dict['timeseries'].items():
         region = bounds.loc[key, 'geometry']
         region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
 
-        run_dict.update({'result_dir': result_dir, 'region': region, 'key': key})
+        data_dict.update({'result_dir': result_dir, 'region': region, 'key': key})
         # Start Use Cases
         if data_dict['run_hpc']:
-            uc.hpc(data_dict['hpc_points'], run_dict)
+            uc.hpc(data_dict['hpc_points'], data_dict)
 
         if data_dict['run_public']:
             uc.public(data_dict['public_positions'], data_dict['poi_data'],
-                      run_dict)
+                      data_dict)
 
         if data_dict['run_home']:
             uc.home(data_dict['zensus'],
-                    run_dict, data_dict['home_prob'], data_dict['num_car'])
+                    data_dict, data_dict['home_prob'], data_dict['num_car'])
 
         if data_dict['run_work']:
             uc.work(data_dict['work'],
                     data_dict['work_dict'],
-                    run_dict)
+                    data_dict)
 
 
 def main():
