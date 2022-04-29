@@ -170,7 +170,7 @@ def home(
         print(energy_sum.round(1), "kWh got charged in region")
         if uc_dict["visual"]:
             plots.plot_uc(uc_id, in_region, uc_dict)
-        cols = ["geometry", "charge_spots", "energy"]
+        cols = ["geometry", "charge_spots", "energy", "charge_spots"]
         utility.save(in_region, uc_id, cols, uc_dict)
 
 
