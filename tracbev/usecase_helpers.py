@@ -115,14 +115,23 @@ def distribute_by_poi(
     return selected_hpc
 
 
-def apportion_home(home_df: pd.DataFrame, num_spots: int):
+def apportion_home(home_df: pd.DataFrame, num_spots: int, config):
+    # use parameters to set number of possible charge spots per row
+    home_df["num_available"] = home_df[["num", "num_mfh"]].apply(home_charge_spots, axis=1, raw=True, args=(config,))
     # if too many spots need to be placed, every house gets a spot
-    if num_spots >= home_df["num_total"].sum():
-        print("All private home spots have been filled. Leftover:", num_spots - home_df["num_total"].sum())
-        return home_df.loc[:, "num_total"]
+    if num_spots >= home_df["num_available"].sum():
+        print("All private home spots have been filled. Leftover:", num_spots - home_df["num_available"].sum())
+        return home_df.loc[:, "num_available"]
     # distribute charge points based on houses per square
-    samples = home_df.sample(num_spots, weights="num_total", random_state=1, replace=True)
+    samples = home_df.sample(num_spots, weights="num_available", random_state=1, replace=True)
     result = pd.Series([0] * len(home_df.index), index=home_df.index)
     for i in samples.index:
         result.at[i] += 1
     return result
+
+
+def home_charge_spots(house_array, config):
+    # take number of houses, random seed, average spots per house and share of houses with possible spots
+    sfh = house_array[0] * config["sfh_avg_spots"] * max(config["random_seed"].normal(config["sfh_available"], 0.1), 0)
+    mfh = house_array[1] * config["mfh_avg_spots"] * max(config["random_seed"].normal(config["mfh_available"], 0.1), 0)
+    return round(sfh + mfh)
