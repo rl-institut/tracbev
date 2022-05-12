@@ -24,3 +24,8 @@ Running TracBEV
 After adding the data directory in your local clone, simply run `main.py`.
 
 As default, this run uses the `tracbev_config.cfg` in the `scenarios` directory. `main.py` takes a file name as an optional parameter, which allows the use of new config files. 
+
+License
+-------
+
+TracBEV is licensed under the MIT License as described in the file `LICENSE <https://github.com/rl-institut/tracbev/blob/dev/LICENSE>`_.
