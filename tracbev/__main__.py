@@ -44,7 +44,7 @@ def parse_data(args):
 
     num_regions = len(ts_dict)
     print('Number of Regions set:', num_regions)
-    print('AGS Region_Key is set to:', ts_dict.keys())
+    print('AGS Region Key is set to:', ", ".join(ts_dict.keys()))
 
     # set random seed from config or truly random if none is given
     rng_seed = parser['basic'].getint('random_seed', None)
@@ -139,7 +139,7 @@ def run_tracbev(data_dict):
 
 
 def main():
-    print('Starting Program for Distribution of Energy...')
+    print('Reading TracBEV input data...')
 
     argparser = argparse.ArgumentParser(description='TracBEV tool for allocation of charging infrastructure')
     argparser.add_argument('scenario', default="default_scenario", nargs='?',

@@ -21,9 +21,9 @@ The required data to run this tool can be downloaded `here <https://zenodo.org/r
 Running TracBEV
 ---------------
 
-After adding the data directory in your local clone, simply run `main.py`.
+After adding the data directory in your local clone, simply run the module `tracbev`.
 
-As default, this run uses the `tracbev_config.cfg` in the `scenarios` directory. `main.py` takes a file name as an optional parameter, which allows the use of new config files. 
+As default, this run uses the `tracbev_config.cfg` in the `scenarios` directory. The module takes a file name as an optional parameter, which allows the use of new config files.
 
 License
 -------
