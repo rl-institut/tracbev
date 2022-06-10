@@ -21,6 +21,7 @@ def save(data: gpd.GeoDataFrame, uc, col_select, uc_dict):
     filename = 'output_{}_{}'.format(uc, region_key)
     save_path_csv = os.path.join(uc_dict["result_dir"], filename + '.csv')
     save_path_gpkg = os.path.join(uc_dict["result_dir"], filename + '.gpkg')
-    data.to_csv(save_path_csv, sep=';', columns=col_select, decimal='.', index=True)
+    data.reset_index(drop=True, inplace=True)
+    data.to_csv(save_path_csv, sep=',', columns=col_select, decimal='.')
     data.to_file(save_path_gpkg, driver="GPKG")
     print('saving {} in region {} successful'.format(uc, region_key))

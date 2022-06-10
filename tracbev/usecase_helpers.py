@@ -63,7 +63,7 @@ def preprocess_poi(region_poi_unfiltered, boundaries, weights, max_radius, max_w
         region_poi = region_poi_unfiltered.loc[region_poi_bool]
         region_poi_unfiltered.drop(region_poi.index, inplace=True)
         if len(region_poi.index) > 0:
-            region_poi = region_poi[["geometry", "weight"]]
+            region_poi = region_poi.loc[["geometry", "weight"]]
             region_poi.sort_values("weight", inplace=True, ascending=False)
             region_poi = poi_cluster(region_poi, max_radius, max_weight, increment)
             result = gpd.GeoDataFrame(pd.concat([result, region_poi]), crs="EPSG:3035")
@@ -108,10 +108,11 @@ def distribute_by_poi(
         region_poi: gpd.GeoDataFrame,
         num_points):
     # sort clusters without existing points by weight, then choose highest
+    region_poi = region_poi.copy()
     region_poi.sort_values("potential", inplace=True, ascending=False)
     num_points = int(min(num_points, len(region_poi.index)))
     selected_hpc = region_poi.iloc[:num_points]
-    # choose point in cluster thats closest to big street
+    # choose point in cluster that is closest to big street
     return selected_hpc
 
 

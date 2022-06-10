@@ -2,6 +2,31 @@
 Changelog
 =========
 
+v0.3.0 - 2022-06-10
+==========
+
+Added
+-----
+* Functioning setup.py
+* Option to run TracBEV without vehicle data
+* Extra example scenario for potential mode
+
+Changed
+-----
+
+v0.2.0 - 2022-06-01
+==========
+
+Added
+-----
+
+Changed
+-----
+
+* Hotfixed for single region simbev data
+* Inclusion of apartment buildings in home use case
+* Added parameters for home distribution in config
+
 v0.1.0b - 2022-04-22
 ==========
 
@@ -9,7 +34,7 @@ Added
 -----
 * Support for single region SimBEV scenarios
   `#15 <https://github.com/rl-institut/tracbev/issues/15>`_
-* Added necessary file to run SimBEV that wasn't included in the download
+* Added necessary file to run TracBEV that wasn't included in the download
 
 Changed
 -----
