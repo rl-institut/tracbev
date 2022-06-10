@@ -21,11 +21,14 @@ The required data to run this tool can be downloaded `here <https://zenodo.org/r
 Running TracBEV
 ---------------
 
-After adding the data directory in your local clone, simply run the module `tracbev`.
+After adding the data directory in your local clone, simply run the module ``tracbev``:
 
-As default, this run uses the `tracbev_config.cfg` in the `scenarios` directory.
-The module takes a file name as an optional parameter, which allows the use of new config files.
-If you dont have any SimBEV data or just want all potential points in the region, use the argument `--mode potential` when starting TracBEV.
+``python -m tracbev``
+
+As default, this run uses the ``default_scenario`` in the ``scenarios`` directory.
+The module takes a scenario as an optional parameter, which allows the use of new config files.
+
+If you dont have any SimBEV data or just want all potential points in the region, use the argument ``--mode potential`` when starting TracBEV.
 
 License
 -------
