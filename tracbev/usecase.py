@@ -21,14 +21,18 @@ def hpc(hpc_points: gpd.GeoDataFrame,
     uc_id = 'hpc'
     print('Use case: ', uc_id)
 
-    # get hpc charging series
-    ts_dict = uc_dict["timeseries"]
-    load = ts_dict[uc_dict['key']].loc[:, "sum hpc"]
-    load_sum = load.sum()
-    energy_sum = load_sum * timestep / 60
-    load_peak = load.max()
-    charge_info = uc_dict["charge_info"][uc_id]
-    num_hpc = math.ceil(load_peak / charge_info["avg_power"] * charge_info["c_factor"])
+    if uc_dict["mode"] == "potential":
+        num_hpc = 1000000
+        energy_sum = 1
+    else:
+        # get hpc charging series
+        ts_dict = uc_dict["timeseries"]
+        load = ts_dict[uc_dict['key']].loc[:, "sum hpc"]
+        load_sum = load.sum()
+        energy_sum = load_sum * timestep / 60
+        load_peak = load.max()
+        charge_info = uc_dict["charge_info"][uc_id]
+        num_hpc = math.ceil(load_peak / charge_info["avg_power"] * charge_info["c_factor"])
 
     if num_hpc > 0:
         # filter hpc points by region
@@ -49,7 +53,7 @@ def hpc(hpc_points: gpd.GeoDataFrame,
             sim_in_region_sorted = sim_in_region.sort_values("potential", ascending=False)
             additional_hpc = int(min(num_hpc - num_hpc_real, len(sim_in_region.index)))
             selected_hpc = sim_in_region_sorted.iloc[:additional_hpc]
-            real_in_region = real_in_region.append(selected_hpc)
+            real_in_region = pd.concat([real_in_region, selected_hpc])
         if not len(real_in_region.index):
             print("No potential charging points found!")
         else:
@@ -59,7 +63,7 @@ def hpc(hpc_points: gpd.GeoDataFrame,
             real_in_region["exists"] = real_in_region["new_hpc_tag"] == 0
 
             # outputs
-            print(energy_sum.round(1), "kWh got fastcharged in region")
+            print(round(energy_sum, 1), "kWh got fastcharged in region")
             if uc_dict["visual"]:
                 plots.plot_uc(uc_id, real_in_region, uc_dict)
             cols.remove("new_hpc_tag")
@@ -88,13 +92,17 @@ def public(
 
     uc_id = "public"
     print("Use case: " + uc_id)
-    ts_dict = uc_dict["timeseries"]
-    load = ts_dict[uc_dict['key']].loc[:, "sum public"]
-    load_sum = load.sum()
-    energy_sum = load_sum * timestep / 60
-    load_peak = load.max()
-    charge_info = uc_dict["charge_info"][uc_id]
-    num_public = math.ceil(load_peak / charge_info["avg_power"] * charge_info["c_factor"])
+    if uc_dict["mode"] == "potential":
+        num_public = 1000000
+        energy_sum = 1
+    else:
+        ts_dict = uc_dict["timeseries"]
+        load = ts_dict[uc_dict['key']].loc[:, "sum public"]
+        load_sum = load.sum()
+        energy_sum = load_sum * timestep / 60
+        load_peak = load.max()
+        charge_info = uc_dict["charge_info"][uc_id]
+        num_public = math.ceil(load_peak / charge_info["avg_power"] * charge_info["c_factor"])
     if num_public > 0:
         # filter hpc points by region
         in_region_bool = public_points["geometry"].within(uc_dict["region"].loc[0])
@@ -115,7 +123,7 @@ def public(
         region_points["energy"] = region_points["potential"] / region_points["potential"].sum() * energy_sum
 
         # outputs
-        print(energy_sum.round(1), "kWh got charged in region")
+        print(round(energy_sum, 1), "kWh got charged in region")
         if uc_dict["visual"]:
             plots.plot_uc(uc_id, region_points, uc_dict)
         cols = ["geometry", "potential", "energy"]
@@ -144,15 +152,19 @@ def home(
     """
     uc_id = "home"
     print("Use case: " + uc_id)
-    ts_dict = uc_dict["timeseries"]
-    load = ts_dict[uc_dict['key']].loc[:, "sum home"]
-    load_sum = load.sum()
-    energy_sum = load_sum * timestep / 60
-    if len(car_num.index) == 1:
-        car_sum = sum(car_num.at["single_region"].values())
+    if uc_dict["mode"] == "potential":
+        num_home = 1000000
+        energy_sum = 1
     else:
-        car_sum = sum(car_num.at[uc_dict['key']].values())
-    num_home = math.ceil(car_sum * home_charge_prob)
+        ts_dict = uc_dict["timeseries"]
+        load = ts_dict[uc_dict['key']].loc[:, "sum home"]
+        load_sum = load.sum()
+        energy_sum = load_sum * timestep / 60
+        if len(car_num.index) == 1:
+            car_sum = sum(car_num.at["single_region"].values())
+        else:
+            car_sum = sum(car_num.at[uc_dict['key']].values())
+        num_home = math.ceil(car_sum * home_charge_prob)
 
     if num_home > 0:
         # filter houses by region
@@ -167,10 +179,10 @@ def home(
         # in_region = in_region.iloc[:num_home]
         # in_region = in_region.assign(energy=energy_sum/num_home)
         # outputs
-        print(energy_sum.round(1), "kWh got charged in region")
+        print(round(energy_sum, 1), "kWh got charged in region")
         if uc_dict["visual"]:
             plots.plot_uc(uc_id, in_region, uc_dict)
-        cols = ["geometry", "charge_spots", "energy", "charge_spots"]
+        cols = ["geometry", "charge_spots", "energy"]
         utility.save(in_region, uc_id, cols, uc_dict)
 
 
@@ -191,10 +203,13 @@ def work(
     """
     uc_id = "work"
     print("Use case: " + uc_id)
-    ts_dict = uc_dict["timeseries"]
-    load = ts_dict[uc_dict['key']].loc[:, "sum work"]
-    load_sum = load.sum()
-    energy_sum = load_sum * timestep / 60
+    if uc_dict["mode"] == "potential":
+        energy_sum = 1
+    else:
+        ts_dict = uc_dict["timeseries"]
+        load = ts_dict[uc_dict['key']].loc[:, "sum work"]
+        load_sum = load.sum()
+        energy_sum = load_sum * timestep / 60
 
     in_region_bool = landuse.within(uc_dict["region"].loc[0])
     in_region = landuse[in_region_bool].copy()
@@ -211,7 +226,7 @@ def work(
 
     result['energy'] = result['potential'] * energy_sum / result['potential'].sum()
     # outputs
-    print(energy_sum.round(1), "kWh got charged in region")
+    print(round(energy_sum, 1), "kWh got charged in region")
     if uc_dict["visual"]:
         plots.plot_uc(uc_id, result, uc_dict)
     cols = ["geometry", "landuse", "potential", "energy"]

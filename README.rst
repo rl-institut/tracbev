@@ -11,6 +11,7 @@ Installation
 
 - clone repository to your local machine
 - install requirements found in requirements.txt (virtualenv recommended)
+- if install fails on Windows, check out `this link <https://stackoverflow.com/questions/50876702/cant-install-fiona-on-windows>`_
 
 Get Data
 --------
@@ -22,7 +23,9 @@ Running TracBEV
 
 After adding the data directory in your local clone, simply run the module `tracbev`.
 
-As default, this run uses the `tracbev_config.cfg` in the `scenarios` directory. The module takes a file name as an optional parameter, which allows the use of new config files.
+As default, this run uses the `tracbev_config.cfg` in the `scenarios` directory.
+The module takes a file name as an optional parameter, which allows the use of new config files.
+If you dont have any SimBEV data or just want all potential points in the region, use the argument `--mode potential` when starting TracBEV.
 
 License
 -------
