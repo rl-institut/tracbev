@@ -11,7 +11,6 @@ Installation
 
 - clone repository to your local machine
 - install requirements found in requirements.txt (virtualenv recommended)
-- setup.py is not working yet
 
 Get Data
 --------
