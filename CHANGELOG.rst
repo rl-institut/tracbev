@@ -2,7 +2,7 @@
 Changelog
 =========
 
-v0.3.0 - 2022-06-10
+v0.3.0 - 2022-06-xx
 ==========
 
 Added
@@ -10,9 +10,12 @@ Added
 * Functioning setup.py
 * Option to run TracBEV without vehicle data
 * Extra example scenario for potential mode
+* Testing for internal imports
 
 Changed
 -----
+* Fixed internal imports
+  `#23 <https://github.com/rl-institut/tracbev/issues/23>`_
 
 v0.2.0 - 2022-06-01
 ==========
