@@ -6,21 +6,10 @@ https://github.com/rl-institut/workshop/tree/master/test-driven-development.
 Otherwise https://docs.pytest.org/en/latest/ and https://docs.python.org/3/library/unittest.html
 are also good support.
 """
-import pytest
-
-
-# this function will not run as a test as its name does not start by "test_"
-def addition(a, b):
-    return a + b
+from tracbev.__main__ import main
 
 
 # each test is described in a function, the function must start with "test_"
 # something has to be asserted within the function
-def test_addition():
-    assert addition(2, 2) == 4
-
-
-# one can test that exception are raised
-def test_addition_wrong_argument_number():
-    with pytest.raises(TypeError):
-        assert addition(2) == 2  # pylint: disable=E1120
+def test_tracbev():
+    main()

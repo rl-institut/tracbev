@@ -1,9 +1,9 @@
-import plots
+import tracbev.plots as plots
 import tracbev.utility as utility
 import pandas as pd
 import geopandas as gpd
 import math
-import usecase_helpers
+import tracbev.usecase_helpers as uc_helpers
 
 
 def hpc(hpc_points: gpd.GeoDataFrame,
@@ -111,13 +111,13 @@ def public(
         poi_in_region = public_data.loc[poi_in_region_bool].copy()
         num_public_real = in_region["count"].sum()
         # match with clusters anyway (for weights)
-        region_points, region_poi = usecase_helpers.match_existing_points(in_region, poi_in_region)
+        region_points, region_poi = uc_helpers.match_existing_points(in_region, poi_in_region)
         region_points["exists"] = True
 
         if num_public_real < num_public:
             additional_public = num_public - num_public_real
             # distribute additional public points via POI
-            add_points = usecase_helpers.distribute_by_poi(region_poi, additional_public)
+            add_points = uc_helpers.distribute_by_poi(region_poi, additional_public)
             region_points = pd.concat([region_points, add_points])
 
         region_points["energy"] = region_points["potential"] / region_points["potential"].sum() * energy_sum
@@ -171,7 +171,7 @@ def home(
         in_region_bool = home_data["geometry"].within(uc_dict["region"].loc[0])
         in_region = home_data.loc[in_region_bool].copy()
         in_region[["num", "num_mfh"]] = in_region[["num", "num_mfh"]].fillna(value=0)
-        potential = usecase_helpers.apportion_home(in_region, num_home, uc_dict)
+        potential = uc_helpers.apportion_home(in_region, num_home, uc_dict)
         in_region["charge_spots"] = potential
         in_region = in_region.loc[in_region["charge_spots"] > 0]
         in_region["energy"] = energy_sum * in_region["charge_spots"] / num_home
