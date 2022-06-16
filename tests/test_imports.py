@@ -6,10 +6,13 @@ https://github.com/rl-institut/workshop/tree/master/test-driven-development.
 Otherwise https://docs.pytest.org/en/latest/ and https://docs.python.org/3/library/unittest.html
 are also good support.
 """
-from tracbev.__main__ import main
+import tracbev.__main__ as main
+import tracbev.plots as plots
+import tracbev.usecase as uc
+import tracbev.usecase_helpers as uc_helpers
+import tracbev.utility as utility
 
 
-# each test is described in a function, the function must start with "test_"
-# something has to be asserted within the function
-def test_tracbev():
-    main()
+# all tracbev modules are imported and thus tested on internal import errors
+def test_imports():
+    assert True
