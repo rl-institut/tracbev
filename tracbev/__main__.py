@@ -6,7 +6,7 @@ import argparse
 from datetime import datetime
 import pathlib
 
-import usecase as uc
+import tracbev.usecase as uc
 
 
 def parse_data(args):

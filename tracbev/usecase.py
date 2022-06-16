@@ -1,5 +1,5 @@
 import plots
-import utility
+import tracbev.utility as utility
 import pandas as pd
 import geopandas as gpd
 import math
