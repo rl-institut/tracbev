@@ -84,6 +84,7 @@ def parse_data(args):
         work_commercial = float(parser.get('uc_params', 'work_weight_commercial'))
         work_industrial = float(parser.get('uc_params', 'work_weight_industrial'))
         work = gpd.read_file(pathlib.Path(data_dir, 'landuse.gpkg'))
+        work = work.to_crs(3035)
         work_dict = {'retail': work_retail, 'commercial': work_commercial, 'industrial': work_industrial}
         config_dict.update({'work': work, 'work_dict': work_dict})
 

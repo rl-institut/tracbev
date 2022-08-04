@@ -217,11 +217,12 @@ def work(
     in_region["area"] = in_region['geometry'].area / 10 ** 6
     groups = in_region.groupby("landuse")
     group_labels = ["retail", "commercial", "industrial"]
-    result = gpd.GeoDataFrame(columns=["geometry", "landuse", "potential"])
+    result = gpd.GeoDataFrame(columns=["geometry", "landuse", "potential"], crs="EPSG:3035")
     for g in group_labels:
         if g in groups.groups:
             group = groups.get_group(g)
             group = group.assign(potential=group["geometry"].area * weights_dict[g])
+            group.to_crs(3035)
             result = gpd.GeoDataFrame(pd.concat([result, group]), crs="EPSG:3035")
 
     result['energy'] = result['potential'] * energy_sum / result['potential'].sum()
