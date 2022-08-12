@@ -10,7 +10,13 @@ Installation
 ------------
 
 - clone repository to your local machine
-- install requirements found in requirements.txt (virtualenv recommended)
+
+Linux:
+- install requirements found in requirements.txt (virtualenv recommended) with pip
+
+Windows:
+- install using conda by opening Anaconda Prompt, navigating into the tracbev directory and using the command
+``conda env create -f environment.yml``
 - if install fails on Windows, check out `this link <https://stackoverflow.com/questions/50876702/cant-install-fiona-on-windows>`_
 
 Get Data
