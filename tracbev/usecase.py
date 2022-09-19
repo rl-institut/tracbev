@@ -1,13 +1,14 @@
-import tracbev.plots as plots
-import tracbev.utility as utility
-import pandas as pd
-import geopandas as gpd
 import math
+
+import geopandas as gpd
+import pandas as pd
+
+import tracbev.plots as plots
 import tracbev.usecase_helpers as uc_helpers
+import tracbev.utility as utility
 
 
-def hpc(hpc_points: gpd.GeoDataFrame,
-        uc_dict, timestep=15):
+def hpc(hpc_points: gpd.GeoDataFrame, uc_dict, timestep=15):
     """
     Calculate placements and energy distribution for use case hpc.
 
@@ -18,8 +19,8 @@ def hpc(hpc_points: gpd.GeoDataFrame,
     :param timestep: int
         time step of the simbev input series, default: 15 (minutes)
     """
-    uc_id = 'hpc'
-    print('Use case: ', uc_id)
+    uc_id = "hpc"
+    print("Use case: ", uc_id)
 
     if uc_dict["mode"] == "potential":
         num_hpc = 1000000
@@ -27,12 +28,14 @@ def hpc(hpc_points: gpd.GeoDataFrame,
     else:
         # get hpc charging series
         ts_dict = uc_dict["timeseries"]
-        load = ts_dict[uc_dict['key']].loc[:, "sum hpc"]
+        load = ts_dict[uc_dict["key"]].loc[:, "sum hpc"]
         load_sum = load.sum()
         energy_sum = load_sum * timestep / 60
         load_peak = load.max()
         charge_info = uc_dict["charge_info"][uc_id]
-        num_hpc = math.ceil(load_peak / charge_info["avg_power"] * charge_info["c_factor"])
+        num_hpc = math.ceil(
+            load_peak / charge_info["avg_power"] * charge_info["c_factor"]
+        )
 
     if num_hpc > 0:
         # filter hpc points by region
@@ -50,16 +53,22 @@ def hpc(hpc_points: gpd.GeoDataFrame,
         if num_hpc_real < num_hpc:
             sim_in_region = in_region.loc[~real_mask]
             sim_in_region = sim_in_region.loc[in_region["new_hpc_index"] > 0]
-            sim_in_region_sorted = sim_in_region.sort_values("potential", ascending=False)
+            sim_in_region_sorted = sim_in_region.sort_values(
+                "potential", ascending=False
+            )
             additional_hpc = int(min(num_hpc - num_hpc_real, len(sim_in_region.index)))
             selected_hpc = sim_in_region_sorted.iloc[:additional_hpc]
             real_in_region = pd.concat([real_in_region, selected_hpc])
         if not len(real_in_region.index):
             print("No potential charging points found!")
         else:
-            real_in_region["potential"] = real_in_region["potential"] * real_in_region["hpc_count"]
+            real_in_region["potential"] = (
+                real_in_region["potential"] * real_in_region["hpc_count"]
+            )
             total_potential = real_in_region["potential"].sum()
-            real_in_region = real_in_region.assign(share=real_in_region["potential"] / total_potential).round(6)
+            real_in_region = real_in_region.assign(
+                share=real_in_region["potential"] / total_potential
+            ).round(6)
             real_in_region["exists"] = real_in_region["new_hpc_tag"] == 0
 
             # outputs
@@ -75,8 +84,8 @@ def hpc(hpc_points: gpd.GeoDataFrame,
 
 
 def public(
-        public_points: gpd.GeoDataFrame, public_data: gpd.GeoDataFrame,
-        uc_dict, timestep=15):
+    public_points: gpd.GeoDataFrame, public_data: gpd.GeoDataFrame, uc_dict, timestep=15
+):
     """
     Calculate placements and energy distribution for use case hpc.
 
@@ -97,12 +106,14 @@ def public(
         energy_sum = 1
     else:
         ts_dict = uc_dict["timeseries"]
-        load = ts_dict[uc_dict['key']].loc[:, "sum public"]
+        load = ts_dict[uc_dict["key"]].loc[:, "sum public"]
         load_sum = load.sum()
         energy_sum = load_sum * timestep / 60
         load_peak = load.max()
         charge_info = uc_dict["charge_info"][uc_id]
-        num_public = math.ceil(load_peak / charge_info["avg_power"] * charge_info["c_factor"])
+        num_public = math.ceil(
+            load_peak / charge_info["avg_power"] * charge_info["c_factor"]
+        )
     if num_public > 0:
         # filter hpc points by region
         in_region_bool = public_points["geometry"].within(uc_dict["region"].loc[0])
@@ -111,7 +122,9 @@ def public(
         poi_in_region = public_data.loc[poi_in_region_bool].copy()
         num_public_real = in_region["count"].sum()
         # match with clusters anyway (for weights)
-        region_points, region_poi = uc_helpers.match_existing_points(in_region, poi_in_region)
+        region_points, region_poi = uc_helpers.match_existing_points(
+            in_region, poi_in_region
+        )
         region_points["exists"] = True
 
         if num_public_real < num_public:
@@ -120,7 +133,9 @@ def public(
             add_points = uc_helpers.distribute_by_poi(region_poi, additional_public)
             region_points = pd.concat([region_points, add_points])
 
-        region_points["energy"] = region_points["potential"] / region_points["potential"].sum() * energy_sum
+        region_points["energy"] = (
+            region_points["potential"] / region_points["potential"].sum() * energy_sum
+        )
 
         # outputs
         print(round(energy_sum, 1), "kWh got charged in region")
@@ -133,9 +148,7 @@ def public(
         print("No public charging in timeseries")
 
 
-def home(
-        home_data: gpd.GeoDataFrame,
-        uc_dict, home_charge_prob, car_num, timestep=15):
+def home(home_data: gpd.GeoDataFrame, uc_dict, home_charge_prob, car_num, timestep=15):
     """
     Calculate placements and energy distribution for use case hpc.
 
@@ -157,13 +170,13 @@ def home(
         energy_sum = 1
     else:
         ts_dict = uc_dict["timeseries"]
-        load = ts_dict[uc_dict['key']].loc[:, "sum home"]
+        load = ts_dict[uc_dict["key"]].loc[:, "sum home"]
         load_sum = load.sum()
         energy_sum = load_sum * timestep / 60
         if len(car_num.index) == 1:
             car_sum = sum(car_num.at["single_region"].values())
         else:
-            car_sum = sum(car_num.at[uc_dict['key']].values())
+            car_sum = sum(car_num.at[uc_dict["key"]].values())
         num_home = math.ceil(car_sum * home_charge_prob)
 
     if num_home > 0:
@@ -186,9 +199,7 @@ def home(
         utility.save(in_region, uc_id, cols, uc_dict)
 
 
-def work(
-        landuse, weights_dict,
-        uc_dict, timestep=15):
+def work(landuse, weights_dict, uc_dict, timestep=15):
     """
     Calculate placements and energy distribution for use case hpc.
 
@@ -207,17 +218,19 @@ def work(
         energy_sum = 1
     else:
         ts_dict = uc_dict["timeseries"]
-        load = ts_dict[uc_dict['key']].loc[:, "sum work"]
+        load = ts_dict[uc_dict["key"]].loc[:, "sum work"]
         load_sum = load.sum()
         energy_sum = load_sum * timestep / 60
 
     in_region_bool = landuse.within(uc_dict["region"].loc[0])
     in_region = landuse[in_region_bool].copy()
     # calculating the area of polygons
-    in_region["area"] = in_region['geometry'].area / 10 ** 6
+    in_region["area"] = in_region["geometry"].area / 10**6
     groups = in_region.groupby("landuse")
     group_labels = ["retail", "commercial", "industrial"]
-    result = gpd.GeoDataFrame(columns=["geometry", "landuse", "potential"], crs="EPSG:3035")
+    result = gpd.GeoDataFrame(
+        columns=["geometry", "landuse", "potential"], crs="EPSG:3035"
+    )
     for g in group_labels:
         if g in groups.groups:
             group = groups.get_group(g)
@@ -225,7 +238,7 @@ def work(
             group.to_crs(3035)
             result = gpd.GeoDataFrame(pd.concat([result, group]), crs="EPSG:3035")
 
-    result['energy'] = result['potential'] * energy_sum / result['potential'].sum()
+    result["energy"] = result["potential"] * energy_sum / result["potential"].sum()
     # outputs
     print(round(energy_sum, 1), "kWh got charged in region")
     if uc_dict["visual"]:

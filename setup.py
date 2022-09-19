@@ -5,9 +5,10 @@ https://packaging.python.org/guides/distributing-packages-using-setuptools/
 https://github.com/pypa/sampleproject
 """
 
-# Always prefer setuptools over distutils
-from setuptools import setup, find_packages
 from os import path
+
+# Always prefer setuptools over distutils
+from setuptools import find_packages, setup
 
 here = path.abspath(path.dirname(__file__))
 
@@ -16,8 +17,10 @@ with open(path.join(here, "README.rst"), encoding="utf-8") as f:
     long_description = f.read()
 
 # Get requirements
-with open('requirements.txt') as f:
+with open("requirements.txt") as f:
     requirements = f.read().splitlines()
+
+dev_requirements = ["pre-commit", "black", "isort", "pyupgrade", "flake8"]
 
 setup(
     # This is the name of your project. The first time you publish this
@@ -42,7 +45,9 @@ setup(
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
     # https://packaging.python.org/specifications/core-metadata/#summary
-    description="Tool for the regional allocation of charging infrastructure in Germany",  # Optional
+    description=(
+        "Tool for the regional allocation of charging infrastructure in Germany"
+    ),  # Optional
     # This is an optional longer description of your project that represents
     # the body of text which users will see when they visit PyPI.
     #
@@ -134,7 +139,7 @@ setup(
     #
     # Similar to `install_requires` above, these must be valid existing
     # projects.
-    # extras_require={"dev": [], "test": []},  # Optional
+    extras_require={"dev": dev_requirements},  # Optional
     # If there are data files included in your packages that need to be
     # installed, specify them here.
     #

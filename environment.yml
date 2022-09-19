@@ -1,5 +1,16 @@
-name: myvenv
+name: tracbev_env
+channels:
+  - conda-forge
+  - defaults
 dependencies:
-- python=3.8
-- pip:
-   - -r requirements.txt
+   - python=3.8
+   - pip
+   - pandas=1.4.2
+   - numpy
+   - matplotlib
+   - configparser
+   - conda-forge::fiona
+   - conda-forge::geopandas
+   - conda-forge::pyproj
+   - conda-forge::shapely
+   - conda-forge::descartes
