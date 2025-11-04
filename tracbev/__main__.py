@@ -159,7 +159,7 @@ def run_tracbev_default(data_dict):
     result_dir = pathlib.Path('results', '{}_{}'.format(data_dict['scenario_name'], timestamp))
     result_dir.mkdir(exist_ok=True, parents=True)
 
-    for key, timeseries in data_dict['timeseries'].items():
+    for key, _ in data_dict['timeseries'].items():
         region = bounds.loc[key, 'geometry']
         region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
 
