@@ -88,7 +88,7 @@ def match_existing_points(
             region_points.at[i, "potential"] = 5
         elif num_clusters == 1:
             # region_poi.loc[cluster, "exists"] = True
-            region_points.at[i, "potential"] = clusters["potential"]
+            region_points.at[i, "potential"] = float(clusters["potential"])
             region_poi.loc[cluster, "exists"] = True
 
         elif num_clusters > 1:
@@ -96,7 +96,7 @@ def match_existing_points(
             dist = clusters.distance(lis_point)
             idx = dist.idxmin()
             region_poi.at[idx, "exists"] = True
-            region_points.at[i, "potential"] = clusters.at[idx, "potential"]
+            region_points.at[i, "potential"] = float(clusters.at[idx, "potential"])
 
     # delete all clusters with exists = True
     region_poi = region_poi.loc[~region_poi["exists"]]

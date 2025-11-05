@@ -99,12 +99,12 @@ def parse_car_data(args):
         ts_dict[ts.stem] = pd.read_csv(ts, sep=",")
 
     simbev_meta = pd.read_json(pathlib.Path(ts_path, "metadata_simbev_run.json"))
-    home_charging_prob = simbev_meta.loc["charging_probabilities", "config"]["private_charging_home"]
+    home_charging_prob = simbev_meta.loc[:, "home_charging"]
 
-    num_car = simbev_meta.loc[:, "car_amounts"].dropna()
+    num_car = simbev_meta.loc[:, "regions"].dropna()
 
     car_data_dict = {
-        "home_prob": float(home_charging_prob),
+        "home_prob": home_charging_prob,
         "num_car": num_car,
         'timeseries': ts_dict,
     }
@@ -159,7 +159,7 @@ def run_tracbev_default(data_dict):
     result_dir = pathlib.Path('results', '{}_{}'.format(data_dict['scenario_name'], timestamp))
     result_dir.mkdir(exist_ok=True, parents=True)
 
-    for key, timeseries in data_dict['timeseries'].items():
+    for key, _ in data_dict['timeseries'].items():
         region = bounds.loc[key, 'geometry']
         region = gpd.GeoSeries(region)  # format to geo series, otherwise problems plotting
 

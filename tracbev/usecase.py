@@ -26,8 +26,9 @@ def hpc(hpc_points: gpd.GeoDataFrame,
         energy_sum = 1
     else:
         # get hpc charging series
-        ts_dict = uc_dict["timeseries"]
-        load = ts_dict[uc_dict['key']].loc[:, "sum hpc"]
+        ts_dict = uc_dict["timeseries"].copy()
+        load = (ts_dict[uc_dict['key']].loc[:, "urban_fast_total_power"]
+                + ts_dict[uc_dict['key']].loc[:, "highway_fast_total_power"])
         load_sum = load.sum()
         energy_sum = load_sum * timestep / 60
         load_peak = load.max()
@@ -96,8 +97,9 @@ def public(
         num_public = 1000000
         energy_sum = 1
     else:
-        ts_dict = uc_dict["timeseries"]
-        load = ts_dict[uc_dict['key']].loc[:, "sum public"]
+        ts_dict = uc_dict["timeseries"].copy()
+        load = (ts_dict[uc_dict['key']].loc[:, "street_total_power"]
+                + ts_dict[uc_dict['key']].loc[:, "retail_total_power"])
         load_sum = load.sum()
         energy_sum = load_sum * timestep / 60
         load_peak = load.max()
@@ -156,15 +158,18 @@ def home(
         num_home = 1000000
         energy_sum = 1
     else:
-        ts_dict = uc_dict["timeseries"]
-        load = ts_dict[uc_dict['key']].loc[:, "sum home"]
+        ts_dict = uc_dict["timeseries"].copy()
+        load = (ts_dict[uc_dict['key']].loc[:, "home_detached_total_power"]
+                + ts_dict[uc_dict['key']].loc[:, "home_apartment_total_power"])
         load_sum = load.sum()
         energy_sum = load_sum * timestep / 60
         if len(car_num.index) == 1:
-            car_sum = sum(car_num.at["single_region"].values())
+            region_dict = car_num.at["single_region"]
         else:
-            car_sum = sum(car_num.at[uc_dict['key']].values())
-        num_home = math.ceil(car_sum * home_charge_prob)
+            region_dict = car_num.at[uc_dict['key']]
+        home_charge_factor = float(home_charge_prob[region_dict.pop("RegioStaR7")])
+        car_sum = sum(region_dict.values())
+        num_home = math.ceil(car_sum * home_charge_factor)   
 
     if num_home > 0:
         # filter houses by region
@@ -206,8 +211,8 @@ def work(
     if uc_dict["mode"] == "potential":
         energy_sum = 1
     else:
-        ts_dict = uc_dict["timeseries"]
-        load = ts_dict[uc_dict['key']].loc[:, "sum work"]
+        ts_dict = uc_dict["timeseries"].copy()
+        load = ts_dict[uc_dict['key']].loc[:, "work_total_power"]
         load_sum = load.sum()
         energy_sum = load_sum * timestep / 60
 
